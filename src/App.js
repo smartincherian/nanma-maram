@@ -1,24 +1,27 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import "./App.css";
+import { SnackbarProvider } from "./components/Snackbar";
+import PrayerForm from "./pages/PrayerForm";
+import Home from "./pages/Home";
+import IntentionsList from "./pages/IntentionsList";
+import Counter from "./pages/Counter";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <SnackbarProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/intention-add" element={<PrayerForm />} />
+          <Route path="/intention-list" element={<IntentionsList />} />
+          <Route path="/counter/:id" element={<Counter />} />
+          <Route
+            path="/intention-mother"
+            element={<PrayerForm path={"mother"} />}
+          />
+        </Routes>
+      </BrowserRouter>
+    </SnackbarProvider>
   );
 }
 
