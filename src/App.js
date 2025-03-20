@@ -5,6 +5,7 @@ import PrayerForm from "./pages/PrayerForm";
 import Home from "./pages/Home";
 import IntentionsList from "./pages/IntentionsList";
 import Counter from "./pages/Counter";
+import ThousandBeads from "./pages/1000beads";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             path="/intention-mother"
             element={<PrayerForm path={"mother"} />}
           />
+          <Route path="/1000-beads-extra" element={<ThousandBeads />} />
         </Routes>
       </BrowserRouter>
     </SnackbarProvider>

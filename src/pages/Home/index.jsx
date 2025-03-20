@@ -32,6 +32,11 @@ const Home = ({ onNavigate }) => {
       icon: <ChurchIcon />,
       path: "/intention-add",
     },
+    {
+      text: "1000 Beads - Extra Mysteries",
+      icon: <FilterVintageIcon />,
+      path: "/1000-beads-extra",
+    },
   ];
 
   return (

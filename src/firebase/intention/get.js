@@ -17,3 +17,18 @@ export const fetchIntentions = async () => {
     throw error;
   }
 };
+export const fetchUpdates = async () => {
+  try {
+    const updateRef = "rosaryUpdates";
+    const q = query(updateRef);
+    const querySnapshot = await getDocs(q);
+    let response = querySnapshot.docs.map((doc) => ({
+      ...doc.data(),
+      id: doc.id,
+    }));
+    return response || [];
+  } catch (error) {
+    console.error("fetchUpdates :", error);
+    throw error;
+  }
+};
