@@ -7,35 +7,19 @@ import {
   IconButton,
   Box,
   Card,
+  Avatar,
+  Skeleton,
+  CircularProgress,
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { doc, onSnapshot } from "firebase/firestore";
 import { DB } from "../../config/firebase";
 import { minusCounter, plusCounter } from "../../firebase/1000beads/counter";
-
-const mysteries = [
-  { type: "Joyful", number: 1, key: "joy1" },
-  { type: "Joyful", number: 2, key: "joy2" },
-  { type: "Joyful", number: 3, key: "joy3" },
-  { type: "Joyful", number: 4, key: "joy4" },
-  { type: "Joyful", number: 5, key: "joy5" },
-  { type: "Luminous", number: 1, key: "lumin1" },
-  { type: "Luminous", number: 2, key: "lumin2" },
-  { type: "Luminous", number: 3, key: "lumin3" },
-  { type: "Luminous", number: 4, key: "lumin4" },
-  { type: "Luminous", number: 5, key: "lumin5" },
-  { type: "Sorrowful", number: 1, key: "sorrow1" },
-  { type: "Sorrowful", number: 2, key: "sorrow2" },
-  { type: "Sorrowful", number: 3, key: "sorrow3" },
-  { type: "Sorrowful", number: 4, key: "sorrow4" },
-  { type: "Sorrowful", number: 5, key: "sorrow5" },
-  { type: "Glorious", number: 1, key: "glory1" },
-  { type: "Glorious", number: 2, key: "glory2" },
-  { type: "Glorious", number: 3, key: "glory3" },
-  { type: "Glorious", number: 4, key: "glory4" },
-  { type: "Glorious", number: 5, key: "glory5" },
-];
+import ModalWithDatePicker from "./ModalWIthDate";
+import { muiDateToDdmmyyyy, muiDateToTimestamp } from "../../utils/helpers";
+import { mysteries } from "./constants";
+import { checkExisting } from "../../firebase/1000beads/logs";
 
 function ThousandBeads() {
   const [counts, setCounts] = useState(
@@ -44,33 +28,67 @@ function ThousandBeads() {
       return acc;
     }, {})
   );
+  const [openModal, setOpenModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [pendingKey, setPendingKey] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const docRef = doc(DB, "1000beads", "extra");
-    const unsubscribe = onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const firebaseData = doc.data();
-        setCounts((prevCounts) => {
-          return mysteries.reduce((acc, { key }) => {
-            acc[key] = firebaseData[key] ?? prevCounts[key] ?? 0;
-            return acc;
-          }, {});
-        });
+
+    const unsubscribe = onSnapshot(
+      docRef,
+      (doc) => {
+        if (doc.exists()) {
+          const firebaseData = doc.data();
+          setCounts((prevCounts) => {
+            return mysteries.reduce((acc, { key }) => {
+              acc[key] = firebaseData[key] ?? prevCounts[key] ?? 0;
+              return acc;
+            }, {});
+          });
+        }
+        setLoading(false); //
+      },
+      (error) => {
+        console.error("Error fetching document:", error);
+        setLoading(false); //
       }
-    });
+    );
 
     return () => unsubscribe();
   }, []);
 
+  const handleModalConfirm = async (data) => {
+    if (pendingAction && pendingKey !== null) {
+      if (pendingAction === "add") {
+        const payload = { key: pendingKey };
+        await plusCounter(payload);
+      } else if (pendingAction === "reduce") {
+        const { selectedDate, selectedGroup } = data;
+        const date = muiDateToDdmmyyyy(selectedDate);
+        const payload = { key: pendingKey, group: selectedGroup, date };
+        await minusCounter(payload);
+      }
+      setPendingAction(null);
+      setPendingKey(null);
+    }
+  };
+
   const handleAdd = async (key) => {
-    await plusCounter(key);
+    setPendingAction("add");
+    setPendingKey(key);
+    const payload = { key };
+    await plusCounter(payload);
   };
 
   const handleReduce = async (key) => {
     if (counts[key] <= 0) {
       return;
     }
-    await minusCounter(key);
+    setPendingAction("reduce");
+    setPendingKey(key);
+    setOpenModal(true);
   };
 
   const getOrdinalSuffix = (num) => {
@@ -91,6 +109,22 @@ function ThousandBeads() {
   return (
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
       <Paper elevation={6} sx={{ p: 4, borderRadius: 4, textAlign: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <Avatar
+            src={"/images/MotherMary.jpg"}
+            alt="MotherMary"
+            sx={{
+              width: { xs: 200, md: 250 },
+              height: { xs: 200, md: 250 },
+            }}
+          />
+        </Box>
         <Typography
           fontWeight="bold"
           align="center"
@@ -98,14 +132,15 @@ function ThousandBeads() {
             background: "linear-gradient(45deg, #d32f2f, #ff7043)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            fontSize: { xs: "1.8rem" },
+            fontSize: { xs: "1.5rem" },
             letterSpacing: 0.5,
-            textTransform: "uppercase",
+            // textTransform: "uppercase",
             fontFamily: "'Poppins', sans-serif",
             mb: 2,
           }}
         >
-          Nanma Maram 1000 Beads - Extra Mysteries
+          Nanma Maram 1000 Beads -<br />
+          Extra Mysteries
         </Typography>
         <Typography variant="body2" color="textSecondary" gutterBottom>
           Tap '+' to increase if recited more. <br />
@@ -114,7 +149,7 @@ function ThousandBeads() {
         </Typography>
 
         {/* Display Active Mysteries if Any */}
-        {extraMysteries.length > 0 && (
+        {extraMysteries.length > 0 ? (
           <Box
             sx={{
               mt: 3,
@@ -132,7 +167,7 @@ function ThousandBeads() {
               Extra Mysteries Available:
             </Typography>
             <Grid container spacing={1} sx={{ mt: 1 }}>
-              {extraMysteries.map(({ type, number, key }) => (
+              {extraMysteries.map(({ type, number, key, typeShort }) => (
                 <Grid item xs={6} key={key}>
                   <Typography
                     sx={{
@@ -142,7 +177,8 @@ function ThousandBeads() {
                       WebkitTextFillColor: "transparent",
                     }}
                   >
-                    {type} {number}
+                    {typeShort}
+                    {number}
                     {getOrdinalSuffix(number)}:{counts[key]}
                   </Typography>
                 </Grid>
@@ -156,7 +192,18 @@ function ThousandBeads() {
               * Don't forget to tap '-' if taking an extra mystery.
             </Typography>
           </Box>
-        )}
+        ) : loading ? (
+          <Box
+            sx={{
+              mt: 3,
+              mb: 3,
+              backgroundColor: "#fce4ec",
+              borderRadius: 3,
+            }}
+          >
+            <Skeleton variant="rectangular" width="100%" height={200} />
+          </Box>
+        ) : null}
 
         <Grid container spacing={2} sx={{ mt: 3 }}>
           {mysteries.map(({ type, number, key }) => {
@@ -216,6 +263,11 @@ function ThousandBeads() {
           })}
         </Grid>
       </Paper>
+      <ModalWithDatePicker
+        open={openModal}
+        setOpen={setOpenModal}
+        handleSubmitData={handleModalConfirm}
+      />
     </Container>
   );
 }

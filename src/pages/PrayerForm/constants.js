@@ -2,6 +2,10 @@ export const COMMON_PRAYER_TYPES = [
   { value: "hailMary", label: "നന്മ നിറഞ്ഞ മറിയമേ (Hail Mary)" },
   { value: "divineMercy", label: "കരുണ കൊന്ത (Divine Mercy)" },
   { value: "rosary", label: "ജപമാല (Holy Rosary)" },
+  {
+    value: "mostMercifulMother",
+    label: "എത്രയും ദയയുള്ള മാതാവേ (O Most Merciful Mother)",
+  },
 ];
 export const MOTHER_PRAYER_TYPES = [
   { value: "rosary", label: "ജപമാല (Holy Rosary)" },
