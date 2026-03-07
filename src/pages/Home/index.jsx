@@ -37,6 +37,16 @@ const Home = ({ onNavigate }) => {
       icon: <FilterVintageIcon />,
       path: "/1000-beads-extra",
     },
+    {
+      text: "Teens - Personal Prayer",
+      icon: <FilterVintageIcon />,
+      path: "/teens-personal-prayer",
+    },
+    {
+      text: "Zoom Slot Booking",
+      icon: <ContactMailIcon />,
+      path: "/chapel-slot",
+    },
   ];
 
   return (

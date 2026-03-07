@@ -17,3 +17,15 @@ export const muiDateToDdmmyyyy = (date) => {
   }
   return "";
 };
+
+export const formatPhoneForWhatsApp = (phone) => {
+  const digits = phone.replace(/\D/g, ""); // remove all non-digits
+
+  // Add default country code (India: 91) if only 10 digits
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+
+  // Assume already includes country code if length > 10
+  return digits;
+};
