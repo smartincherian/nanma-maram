@@ -1,26 +1,22 @@
-import ContactMailIcon from "@mui/icons-material/ContactMail";
 import ChurchIcon from "@mui/icons-material/Church";
-import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
 import {
-  Box,
   Button,
   Container,
   Grid,
+  IconButton,
   Paper,
   Skeleton,
+  Stack,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchIntentions } from "../../firebase/intention/get";
 import FilterVintageIcon from "@mui/icons-material/FilterVintage";
 
-const IntentionsList = ({ onNavigate }) => {
-  const theme = useTheme();
+const IntentionsList = () => {
   const navigate = useNavigate();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [intentions, setIntentions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,36 +57,53 @@ const IntentionsList = ({ onNavigate }) => {
                 </Grid>
               ))
             : intentions.map((item) => (
-                <Grid item xs={12} sm={4} key={item.id}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    startIcon={
-                      item?.isMotherIntention ? (
-                        <FilterVintageIcon />
-                      ) : (
-                        <ChurchIcon />
-                      )
-                    }
-                    onClick={() => navigate(`/counter/${item.id}`)}
-                    fullWidth
-                    sx={{
-                      py: 2,
-                      textTransform: "none",
-                      borderRadius: 2,
-                      backgroundColor: item?.isMotherIntention
-                        ? "#003366"
-                        : "#6699CC",
-                      "&:hover": {
-                        backgroundColor: item?.isMotherIntention
-                          ? "#002244"
-                          : "#6EAEDB", // Slightly darker shade for hover
-                      },
-                    }}
-                  >
-                    {item.intention}
-                  </Button>
+                <Grid item xs={12} sm={6} key={item.id}>
+                  <Paper elevation={2} sx={{ p: 1, borderRadius: 2 }}>
+                    <Stack direction="row" spacing={1} alignItems="stretch">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="large"
+                        startIcon={
+                          item?.isMotherIntention ? (
+                            <FilterVintageIcon />
+                          ) : (
+                            <ChurchIcon />
+                          )
+                        }
+                        onClick={() => navigate(`/counter/${item.id}`)}
+                        fullWidth
+                        sx={{
+                          py: 2,
+                          textTransform: "none",
+                          borderRadius: 2,
+                          backgroundColor: item?.isMotherIntention
+                            ? "#003366"
+                            : "#6699CC",
+                          "&:hover": {
+                            backgroundColor: item?.isMotherIntention
+                              ? "#002244"
+                              : "#6EAEDB",
+                          },
+                        }}
+                      >
+                        {item.intention}
+                      </Button>
+                      <IconButton
+                        color="primary"
+                        aria-label={`Edit ${item.intention}`}
+                        onClick={() => navigate(`/intention-edit/${item.id}`)}
+                        sx={{
+                          borderRadius: 2,
+                          border: "1px solid rgba(25, 118, 210, 0.25)",
+                          alignSelf: "stretch",
+                          px: 1.5,
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Stack>
+                  </Paper>
                 </Grid>
               ))}
         </Grid>

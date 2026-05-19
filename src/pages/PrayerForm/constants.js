@@ -6,6 +6,7 @@ export const COMMON_PRAYER_TYPES = [
     value: "mostMercifulMother",
     label: "എത്രയും ദയയുള്ള മാതാവേ (O Most Merciful Mother)",
   },
+  { value: "bibleVerse", label: "Bible Verse" },
 ];
 export const MOTHER_PRAYER_TYPES = [
   { value: "rosary", label: "ജപമാല (Holy Rosary)" },

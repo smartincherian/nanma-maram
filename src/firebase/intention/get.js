@@ -1,16 +1,17 @@
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { DB } from "../../config/firebase";
 
 const ref = collection(DB, "intentions");
 
 export const fetchIntentions = async () => {
   try {
-    const q = query(ref, orderBy("createdAt"));
-    const querySnapshot = await getDocs(q);
-    let response = querySnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }));
+    const querySnapshot = await getDocs(ref);
+    const response = querySnapshot.docs
+      .map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }))
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     return response || [];
   } catch (error) {
     console.error("fetchIntentions :", error);
@@ -19,10 +20,9 @@ export const fetchIntentions = async () => {
 };
 export const fetchUpdates = async () => {
   try {
-    const updateRef = "rosaryUpdates";
-    const q = query(updateRef);
-    const querySnapshot = await getDocs(q);
-    let response = querySnapshot.docs.map((doc) => ({
+    const updateRef = collection(DB, "rosaryUpdates");
+    const querySnapshot = await getDocs(updateRef);
+    const response = querySnapshot.docs.map((doc) => ({
       ...doc.data(),
       id: doc.id,
     }));
