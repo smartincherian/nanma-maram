@@ -24,7 +24,10 @@ import {
   collection,
   doc,
   getDocs,
+  limit,
   onSnapshot,
+  orderBy,
+  query,
 } from "firebase/firestore";
 import { Controller, useForm } from "react-hook-form";
 import { DB } from "../../config/firebase";
@@ -75,7 +78,8 @@ const getUpdateCollectionName = (id, intentionData = {}) => {
 const Counter = () => {
   const { id } = useParams();
   const [counterData, setCounterData] = useState({});
-  const [updateLogs, setUpdateLogs] = useState([]);
+  const [latestLogs, setLatestLogs] = useState([]);
+  const [topLogs, setTopLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const { showSnackbar } = useContext(SnackbarContext);
@@ -134,21 +138,44 @@ const Counter = () => {
 
   const fetchUpdateLogs = useCallback(async () => {
     if (!id || !shouldShowLogs) {
-      setUpdateLogs([]);
+      setLatestLogs([]);
+      setTopLogs([]);
       return;
     }
 
     setLogsLoading(true);
 
     try {
-      const snapshot = await getDocs(collection(DB, updateCollectionName));
-      const logs = snapshot.docs.map((item) => ({
-        id: item.id,
-        ...item.data(),
-      }));
-      setUpdateLogs(logs);
+      const latestQuery = query(
+        collection(DB, updateCollectionName),
+        orderBy("timestamp", "desc"),
+        limit(5)
+      );
+      const topQuery = query(
+        collection(DB, updateCollectionName),
+        orderBy("newCount", "desc"),
+        limit(5)
+      );
+      const [latestSnapshot, topSnapshot] = await Promise.all([
+        getDocs(latestQuery),
+        getDocs(topQuery),
+      ]);
+
+      setLatestLogs(
+        latestSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }))
+      );
+      setTopLogs(
+        topSnapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }))
+      );
     } catch (error) {
-      setUpdateLogs([]);
+      setLatestLogs([]);
+      setTopLogs([]);
       showSnackbar(
         error?.message || "Unable to fetch values",
         SNACK_BAR_SEVERITY_TYPES.ERROR
@@ -160,25 +187,13 @@ const Counter = () => {
 
   useEffect(() => {
     if (!shouldShowLogs) {
-      setUpdateLogs([]);
+      setLatestLogs([]);
+      setTopLogs([]);
       return;
     }
 
-    const loadInitialLogs = async () => {
-      try {
-        const snapshot = await getDocs(collection(DB, updateCollectionName));
-        const logs = snapshot.docs.map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }));
-        setUpdateLogs(logs);
-      } catch (error) {
-        setUpdateLogs([]);
-      }
-    };
-
-    loadInitialLogs();
-  }, [id, shouldShowLogs, updateCollectionName]);
+    fetchUpdateLogs();
+  }, [fetchUpdateLogs, shouldShowLogs]);
 
   const onSubmit = async (data) => {
     try {
@@ -289,16 +304,8 @@ const Counter = () => {
     ...statValueSx,
     color: "#F57C00",
   };
-  const lastFiveEntries = [...updateLogs]
-    .sort((a, b) => {
-      const aTime = a?.timestamp?.toMillis?.() || 0;
-      const bTime = b?.timestamp?.toMillis?.() || 0;
-      return bTime - aTime;
-    })
-    .slice(0, 5);
-  const topFiveEntries = [...updateLogs]
-    .sort((a, b) => Number(b?.newCount || 0) - Number(a?.newCount || 0))
-    .slice(0, 5);
+  const lastFiveEntries = latestLogs;
+  const topFiveEntries = topLogs;
   const renderLogList = (entries) => {
     if (!entries.length) {
       return (
