@@ -2,6 +2,7 @@ import ContactMailIcon from "@mui/icons-material/ContactMail";
 import ChurchIcon from "@mui/icons-material/Church";
 import AddIcon from "@mui/icons-material/Add";
 import FilterVintageIcon from "@mui/icons-material/FilterVintage";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import {
   Box,
   Button,
@@ -56,6 +57,12 @@ const Home = () => {
       helper: "Reserve chapel and meeting slots",
       icon: <ContactMailIcon />,
       path: "/chapel-slot",
+    },
+    {
+      text: "Register Prayer Bank",
+      helper: "Create or login to your personal prayer bank",
+      icon: <AccountCircleIcon />,
+      path: "/register-prayer-bank",
     },
   ];
 

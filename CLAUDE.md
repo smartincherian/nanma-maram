@@ -1,0 +1,58 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+npm start          # dev server at http://localhost:3000
+npm run build      # production build → build/
+npm test           # Jest watch mode (CRA)
+npm test -- --watchAll=false   # single run, no watch
+npm test -- --testPathPattern=App  # run one test file
+```
+
+Deploy: `firebase deploy` (targets the `nanma-maram` Firebase project; deploys `build/` to Hosting).
+
+## Architecture
+
+**Nanma Maram** is a React 18 SPA (Create React App) for Catholic group prayer tracking. Users submit prayer intentions, then anyone can increment a shared counter for each intention.
+
+### Data layer — Firebase Firestore
+
+All reads/writes live in `src/firebase/intention/`. The `DB` export from `src/config/firebase.js` is the shared Firestore instance.
+
+- `intentions` collection — one document per prayer intention. Key fields: `count`, `maxCount`, `prayerType`, `isMotherIntention`, `collectionName`, `showLast5AndTop5`.
+- Update-log collections (`rosaryUpdates`, `hailMaryUpdates`, `otherUpdates`, or a custom name from `collectionName`) — each `addCounter` call writes a log document `{ newCount, timestamp, user }` in the appropriate sub-collection.
+- `addCounter` uses a **Firestore transaction** so the increment and the log write are atomic.
+
+### Routing
+
+Defined in `src/App.js`:
+
+| Path | Page |
+|------|------|
+| `/` | Home — menu of all features |
+| `/intention-add` | PrayerForm (create mode) |
+| `/intention-mother` | PrayerForm with `path="mother"` |
+| `/intention-edit/:id` | PrayerForm (edit mode, navigated to from IntentionsList) |
+| `/intention-list` | IntentionsList — pick a counter to open |
+| `/counter/:id` | Counter — live counter for one intention |
+
+### Key pages
+
+**Counter** (`src/pages/Counter/index.jsx`) is the most complex page. It uses `onSnapshot` for a real-time Firestore subscription, `react-hook-form` for the submit form, `canvas-confetti` (lazy-loaded) for celebration animations, and a `<audio>` ref for target-completion sound. Milestone logic: confetti fires at ≥100 added at once, on every lakh crossed, and when `maxCount` is first reached. Completion overlay is shown once per browser session (tracked in `sessionStorage`).
+
+**PrayerForm** (`src/pages/PrayerForm/index.jsx`) doubles as create and edit mode (edit mode detected by `:id` param). It uses `onSnapshot` in edit mode so the current count stays live. The `bibleVerse` prayer type unlocks extra display-title and featured-verse fields rendered conditionally on the selected `prayerType`.
+
+**IntentionsList** navigates to `/counter/:id` (open counter) or `/intention-edit/:id` (edit). Edit route is not declared in `App.js` yet — it resolves to PrayerForm.
+
+### Auth / access control
+
+There is no Firebase Auth. Edit/create operations require the user to type a hardcoded admin code (`ADMIN_CODE = "1305"` in `src/pages/PrayerForm/constants.js`), validated client-side via `react-hook-form`.
+
+### Global UI
+
+`SnackbarProvider` (`src/components/Snackbar/index.js`) wraps the whole app and exposes `{ showSnackbar, hideSnackbar }` via `SnackbarContext`. Import `useContext(SnackbarContext)` in any page to show toast notifications.
+
+UI is Material UI v5 (MUI) throughout. No custom theme provider — components use default MUI theme with inline `sx` prop overrides.
