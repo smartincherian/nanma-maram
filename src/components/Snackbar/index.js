@@ -26,12 +26,12 @@ export const SnackbarProvider = ({ children }) => {
     SNACK_BAR_SEVERITY_TYPES.INFO
   );
 
-  const [position, setPosition] = useState(SNACK_BAR_POSITIONS.TOP_CENTER);
+  const [position, setPosition] = useState(SNACK_BAR_POSITIONS.TOP_RIGHT);
 
   const showSnackbar = (
     message,
     severity,
-    position = SNACK_BAR_POSITIONS.TOP_CENTER
+    position = SNACK_BAR_POSITIONS.TOP_RIGHT
   ) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
