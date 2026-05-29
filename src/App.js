@@ -1,4 +1,9 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import React from "react";
 import "./App.css";
 import { SnackbarProvider } from "./components/Snackbar";
@@ -18,6 +23,16 @@ import AdminRouteGate, {
 } from "./components/AdminRouteGate";
 
 function ProtectedRoute({ children }) {
+  const location = useLocation();
+
+  const isPrayerBankPublicRoute =
+    location.pathname === "/register-prayer-bank" ||
+    location.pathname.startsWith("/prayer-bank/");
+
+  if (isPrayerBankPublicRoute) {
+    return children;
+  }
+
   if (hasLeaderAccess()) {
     return children;
   }

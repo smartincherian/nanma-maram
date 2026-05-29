@@ -1,5 +1,12 @@
-import React, { useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
+  Backdrop,
   Box,
   Button,
   Card,
@@ -10,6 +17,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Modal,
   Skeleton,
   TextField,
   Typography,
@@ -19,6 +27,8 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import HistoryIcon from "@mui/icons-material/History";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import PauseCircleFilledRoundedIcon from "@mui/icons-material/PauseCircleFilledRounded";
+import PlayCircleFilledRoundedIcon from "@mui/icons-material/PlayCircleFilledRounded";
 import { useParams } from "react-router-dom";
 import {
   collection,
@@ -38,6 +48,11 @@ import {
 } from "../../components/Snackbar";
 
 const COUNTER_USERNAME_STORAGE_KEY = "counterUsername";
+const COUNTER_COMPLETION_SESSION_KEY_PREFIX = "counterCompletionShown";
+const FIREWORKS_TRIGGER_COUNT = 100;
+const LAKH_COUNT = 100000;
+
+let confettiLoader;
 
 const getStoredCounterUsername = () => {
   if (typeof window === "undefined") {
@@ -75,6 +90,79 @@ const getUpdateCollectionName = (id, intentionData = {}) => {
   return "otherUpdates";
 };
 
+const getCompletionSessionKey = (id) =>
+  `${COUNTER_COMPLETION_SESSION_KEY_PREFIX}:${id}`;
+
+const loadConfetti = async () => {
+  if (!confettiLoader) {
+    confettiLoader = import("canvas-confetti").then(
+      ({ default: confetti }) => confetti
+    );
+  }
+
+  return confettiLoader;
+};
+
+const getCrossedLakhMilestones = (previousCount, nextCount) => {
+  const previousStep = Math.floor(previousCount / LAKH_COUNT);
+  const nextStep = Math.floor(nextCount / LAKH_COUNT);
+
+  return Math.max(0, nextStep - previousStep);
+};
+
+const celebrateCountMilestone = async ({
+  shouldCelebrateLargeEntry,
+  crossedLakhs,
+  reachedTarget,
+}) => {
+  if (
+    typeof window === "undefined" ||
+    window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+  ) {
+    return;
+  }
+
+  if (!shouldCelebrateLargeEntry && !crossedLakhs && !reachedTarget) {
+    return;
+  }
+
+  const confetti = await loadConfetti();
+  const burstCount = Math.min(
+    3,
+    (shouldCelebrateLargeEntry ? 1 : 0) +
+      (crossedLakhs > 0 ? 1 : 0) +
+      (reachedTarget ? 1 : 0)
+  );
+
+  const fireBurst = (originX) =>
+    confetti({
+      particleCount: 60,
+      spread: 70,
+      startVelocity: 32,
+      origin: { x: originX, y: 0.72 },
+      scalar: 0.9,
+      zIndex: 1600,
+      disableForReducedMotion: true,
+    });
+
+  fireBurst(0.5);
+
+  if (burstCount >= 2) {
+    window.setTimeout(() => fireBurst(0.25), 180);
+  }
+
+  if (burstCount >= 3) {
+    window.setTimeout(() => fireBurst(0.75), 360);
+  }
+
+  if (reachedTarget) {
+    [540, 760, 980, 1220].forEach((delay, index) => {
+      const originX = index % 2 === 0 ? 0.35 : 0.65;
+      window.setTimeout(() => fireBurst(originX), delay);
+    });
+  }
+};
+
 const Counter = () => {
   const { id } = useParams();
   const [counterData, setCounterData] = useState({});
@@ -82,7 +170,13 @@ const Counter = () => {
   const [topLogs, setTopLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+  const [audioAutoplayFailed, setAudioAutoplayFailed] = useState(false);
+  const [completionAudioPlaying, setCompletionAudioPlaying] = useState(false);
   const { showSnackbar } = useContext(SnackbarContext);
+  const audioRef = useRef(null);
+  const hasShownCompletionOverlayRef = useRef(false);
+  const hasAttemptedCompletionAudioRef = useRef(false);
 
   const {
     control,
@@ -98,6 +192,7 @@ const Counter = () => {
   });
 
   const username = watch("username");
+  const inputValue = watch("inputValue");
 
   useEffect(() => {
     const docRef = doc(DB, "intentions", id);
@@ -209,6 +304,32 @@ const Counter = () => {
         value: numericValue,
         user: username,
       });
+
+      const nextCount = currentCount + numericValue;
+      const crossedLakhs = getCrossedLakhMilestones(currentCount, nextCount);
+      const reachedTarget =
+        hasTargetCount &&
+        currentCount < targetCount &&
+        nextCount >= targetCount;
+
+      if (reachedTarget) {
+        setShowCompletionOverlay(true);
+        setAudioAutoplayFailed(false);
+        setCompletionAudioPlaying(false);
+        hasShownCompletionOverlayRef.current = true;
+        hasAttemptedCompletionAudioRef.current = false;
+
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(getCompletionSessionKey(id), "1");
+        }
+      }
+
+      celebrateCountMilestone({
+        shouldCelebrateLargeEntry: numericValue >= FIREWORKS_TRIGGER_COUNT,
+        crossedLakhs,
+        reachedTarget,
+      }).catch(() => {});
+
       showSnackbar(res?.message, SNACK_BAR_SEVERITY_TYPES.SUCCESS);
       reset({ username, inputValue: 1 });
     } catch (error) {
@@ -226,6 +347,10 @@ const Counter = () => {
   const currentCount = counterData?.count || 0;
   const targetCount = counterData?.maxCount || 0;
   const remainingCount = Math.max(0, targetCount - currentCount);
+  const isTargetReached = hasTargetCount && remainingCount <= 0;
+  const shouldShowRemainingCount = hasTargetCount && remainingCount > 0;
+  const numericInputValue = Number(inputValue);
+  const isAddDisabled = loading;
   const defaultFeaturedQuote =
     "പരിശുദ്ധാത്മാവ് എന്റെ മേല്‍ വരും; അത്യുന്നതന്റെ ശക്തി എന്റെ മേല്‍ ആവസിക്കും";
   const displayTitlePrefix = getDisplayValue(
@@ -239,6 +364,19 @@ const Counter = () => {
   const displayTitleSuffix = getDisplayValue(
     counterData?.displayTitleSuffix,
     "പ്രാവശ്യം ചൊല്ലാം"
+  );
+  const completionTitle = getDisplayValue(
+    counterData?.completionTitle,
+    "Target Completed"
+  );
+  const completionMessage = getDisplayValue(
+    counterData?.completionMessage,
+    "Your prayerful presence is a blessing. May the Holy Spirit fill your heart with peace, grace, and abundant blessings."
+  );
+  const completionVerse = getDisplayValue(counterData?.completionVerse, "");
+  const completionAudioSrc = getDisplayValue(
+    counterData?.completionAudioUrl,
+    "/audio/target-complete.mp3"
   );
   const featuredVerse = getDisplayValue(
     counterData?.featuredVerse,
@@ -360,8 +498,381 @@ const Counter = () => {
     </Box>
   );
 
+  const stopCompletionAudio = useCallback(() => {
+    const audioElement = audioRef.current;
+
+    if (!audioElement) {
+      return;
+    }
+
+    audioElement.pause();
+    audioElement.currentTime = 0;
+    setCompletionAudioPlaying(false);
+  }, []);
+
+  const attemptCompletionAudioPlayback = useCallback(async () => {
+    const audioElement = audioRef.current;
+
+    if (!audioElement || !completionAudioSrc) {
+      setAudioAutoplayFailed(true);
+      return;
+    }
+
+    try {
+      audioElement.currentTime = 0;
+      await audioElement.play();
+      setCompletionAudioPlaying(true);
+      setAudioAutoplayFailed(false);
+    } catch (error) {
+      setCompletionAudioPlaying(false);
+      setAudioAutoplayFailed(true);
+    }
+  }, [completionAudioSrc]);
+
+  useEffect(() => {
+    hasShownCompletionOverlayRef.current = false;
+    hasAttemptedCompletionAudioRef.current = false;
+    setShowCompletionOverlay(false);
+    setAudioAutoplayFailed(false);
+    setCompletionAudioPlaying(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || !hasTargetCount || !isTargetReached) {
+      return;
+    }
+
+    if (hasShownCompletionOverlayRef.current) {
+      return;
+    }
+
+    let shouldOpenOverlay = true;
+
+    if (typeof window !== "undefined") {
+      shouldOpenOverlay = !window.sessionStorage.getItem(
+        getCompletionSessionKey(id)
+      );
+    }
+
+    if (!shouldOpenOverlay) {
+      hasShownCompletionOverlayRef.current = true;
+      return;
+    }
+
+    setShowCompletionOverlay(true);
+
+    celebrateCountMilestone({
+      shouldCelebrateLargeEntry: false,
+      crossedLakhs: 0,
+      reachedTarget: true,
+    }).catch(() => {});
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(getCompletionSessionKey(id), "1");
+    }
+
+    hasShownCompletionOverlayRef.current = true;
+  }, [hasTargetCount, id, isTargetReached]);
+
+  useEffect(() => {
+    if (!showCompletionOverlay || hasAttemptedCompletionAudioRef.current) {
+      return;
+    }
+
+    hasAttemptedCompletionAudioRef.current = true;
+    attemptCompletionAudioPlayback();
+  }, [attemptCompletionAudioPlayback, showCompletionOverlay]);
+
+  useEffect(
+    () => () => {
+      stopCompletionAudio();
+    },
+    [stopCompletionAudio]
+  );
+
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, sm: 5 } }}>
+      <audio
+        ref={audioRef}
+        src={completionAudioSrc}
+        preload="auto"
+        onEnded={() => setCompletionAudioPlaying(false)}
+      />
+
+      <Modal
+        open={showCompletionOverlay}
+        onClose={(event, reason) => {
+          if (reason === "backdropClick" || reason === "escapeKeyDown") {
+            return;
+          }
+
+          setShowCompletionOverlay(false);
+          stopCompletionAudio();
+        }}
+        slots={{ backdrop: Backdrop }}
+        slotProps={{
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(17, 24, 39, 0.12)",
+            },
+          },
+        }}
+      >
+        <Box
+          sx={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 2,
+            outline: "none",
+          }}
+        >
+          <Card
+            sx={{
+              width: "100%",
+              maxWidth: 600,
+              borderRadius: 6,
+              overflow: "hidden",
+              boxShadow: "0 30px 90px rgba(49, 27, 69, 0.2)",
+              border: "1px solid rgba(196, 181, 253, 0.45)",
+              background:
+                "linear-gradient(180deg, #fffefe 0%, #fbf7ff 46%, #f7fbff 100%)",
+            }}
+          >
+            <Box
+              sx={{
+                px: { xs: 2.5, sm: 4.5 },
+                py: { xs: 3, sm: 4 },
+                pb: { xs: 3.5, sm: 4.5 },
+                textAlign: "center",
+                background:
+                  "radial-gradient(circle at top, rgba(255, 215, 128, 0.34) 0%, rgba(164, 120, 255, 0.12) 34%, rgba(255,255,255,0) 72%)",
+              }}
+            >
+              <Box
+                sx={{
+                  maxWidth: 500,
+                  mx: "auto",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 72,
+                    height: 72,
+                    mx: "auto",
+                    mb: 1.75,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#7c3aed",
+                    background:
+                      "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.98) 0%, rgba(251,191,36,0.38) 38%, rgba(124,58,237,0.14) 100%)",
+                    boxShadow: "0 16px 36px rgba(124, 58, 237, 0.22)",
+                  }}
+                >
+                  <EmojiEventsIcon sx={{ fontSize: 36 }} />
+                </Box>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    mt: 0.5,
+                    color: "#311b45",
+                    fontWeight: 800,
+                    letterSpacing: "-0.03em",
+                    fontSize: { xs: "2rem", sm: "2.5rem" },
+                  }}
+                >
+                  {completionTitle}
+                </Typography>
+                <Typography
+                  sx={{
+                    mt: 1.25,
+                    color: "#66527f",
+                    lineHeight: 1.8,
+                    fontSize: { xs: "1rem", sm: "1.08rem" },
+                  }}
+                >
+                  {completionMessage}
+                </Typography>
+
+                <Grid container spacing={2} sx={{ mt: 3 }}>
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{
+                        borderRadius: 4,
+                        p: 2.2,
+                        background:
+                          "linear-gradient(180deg, rgba(239,246,255,0.96) 0%, rgba(219,234,254,0.72) 100%)",
+                        border: "1px solid rgba(96, 165, 250, 0.22)",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9)",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "#64748b",
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Target Count
+                      </Typography>
+                      <Typography
+                        sx={{
+                          mt: 0.8,
+                          fontWeight: 900,
+                          color: "#2563eb",
+                          fontSize: { xs: "1.5rem", sm: "1.7rem" },
+                        }}
+                      >
+                        {formatCount(targetCount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{
+                        borderRadius: 4,
+                        p: 2.2,
+                        background:
+                          "linear-gradient(180deg, rgba(240,253,244,0.98) 0%, rgba(220,252,231,0.72) 100%)",
+                        border: "1px solid rgba(74, 222, 128, 0.2)",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9)",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "#64748b",
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Completed Count
+                      </Typography>
+                      <Typography
+                        sx={{
+                          mt: 0.8,
+                          fontWeight: 900,
+                          color: "#15803d",
+                          fontSize: { xs: "1.5rem", sm: "1.7rem" },
+                        }}
+                      >
+                        {formatCount(currentCount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {completionVerse ? (
+                  <Box
+                    sx={{
+                      mt: 2.5,
+                      borderRadius: 3,
+                      px: 2,
+                      py: 1.75,
+                      background:
+                        "linear-gradient(135deg, rgba(74,20,140,0.08) 0%, rgba(124,67,189,0.14) 100%)",
+                      border: "1px solid rgba(124, 67, 189, 0.14)",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color: "#4a148c",
+                        fontWeight: 700,
+                        lineHeight: 1.8,
+                      }}
+                    >
+                      {completionVerse}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                <Box
+                  sx={{
+                    mt: 3.25,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 1.5,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <IconButton
+                    onClick={attemptCompletionAudioPlayback}
+                    disabled={completionAudioPlaying}
+                    aria-label="Play music"
+                    sx={{
+                      width: 58,
+                      height: 58,
+                      color: "#ffffff",
+                      background:
+                        completionAudioPlaying
+                          ? "linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%)"
+                          : "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
+                      boxShadow: completionAudioPlaying
+                        ? "none"
+                        : "0 12px 28px rgba(37, 99, 235, 0.3)",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)",
+                      },
+                      "&.Mui-disabled": {
+                        color: "#ffffff",
+                        background:
+                          "linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%)",
+                      },
+                    }}
+                  >
+                    <PlayCircleFilledRoundedIcon sx={{ fontSize: 34 }} />
+                  </IconButton>
+                  <IconButton
+                    onClick={stopCompletionAudio}
+                    disabled={!completionAudioPlaying}
+                    aria-label="Stop music"
+                    sx={{
+                      width: 58,
+                      height: 58,
+                      color: completionAudioPlaying ? "#7c3aed" : "#b8a9cf",
+                      backgroundColor: "#f6f1ff",
+                      border: "1px solid rgba(124, 58, 237, 0.16)",
+                      "&:hover": {
+                        backgroundColor: "#efe7ff",
+                      },
+                    }}
+                  >
+                    <PauseCircleFilledRoundedIcon sx={{ fontSize: 34 }} />
+                  </IconButton>
+                  <Button
+                    color="inherit"
+                    onClick={() => {
+                      setShowCompletionOverlay(false);
+                      stopCompletionAudio();
+                    }}
+                    sx={{
+                      minWidth: 110,
+                      height: 44,
+                      borderRadius: 999,
+                      px: 2.5,
+                      color: "#4b5563",
+                      fontWeight: 700,
+                      letterSpacing: "0.04em",
+                      backgroundColor: "rgba(255,255,255,0.82)",
+                    }}
+                  >
+                    Close
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          </Card>
+        </Box>
+      </Modal>
+
       <Card
         variant="outlined"
         sx={{
@@ -558,7 +1069,12 @@ const Counter = () => {
                     justifyContent="center"
                     sx={{ mb: 3 }}
                   >
-                    <Grid item xs={12} sm={hasTargetCount ? 6 : 8} md={hasTargetCount ? 4 : 8}>
+                    <Grid
+                      item
+                      xs={12}
+                      sm={hasTargetCount ? 6 : 8}
+                      md={shouldShowRemainingCount ? 4 : hasTargetCount ? 6 : 8}
+                    >
                       <Box sx={statCardSx}>
                         <Typography
                           variant="caption"
@@ -606,7 +1122,7 @@ const Counter = () => {
                       </Grid>
                     ) : null}
 
-                    {hasTargetCount ? (
+                    {shouldShowRemainingCount ? (
                       <Grid item xs={12} sm={6} md={4}>
                         <Box sx={statCardSx}>
                           <Typography
@@ -710,6 +1226,10 @@ const Counter = () => {
                                   },
                               }}
                               variant="outlined"
+                              inputProps={{
+                                min: 1,
+                                max: 1000,
+                              }}
                               InputProps={{
                                 sx: {
                                   borderRadius: 1,
@@ -726,6 +1246,7 @@ const Counter = () => {
                           color="primary"
                           type="submit"
                           fullWidth
+                          disabled={isAddDisabled}
                           startIcon={<AddIcon />}
                           sx={{
                             minWidth: "120px",
