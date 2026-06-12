@@ -187,7 +187,7 @@ const Counter = () => {
   } = useForm({
     defaultValues: {
       username: getStoredCounterUsername(),
-      inputValue: 1,
+      inputValue: "",
     },
   });
 
@@ -977,10 +977,131 @@ const Counter = () => {
                   </Grid>
                 ) : null}
 
+                
+
+                <Grid item xs={12}>
+                  <Box
+                    component="form"
+                    onSubmit={handleSubmit(onSubmit)}
+                    sx={{
+                      p: { xs: 1.5, sm: 2 },
+                      borderRadius: 3,
+                      bgcolor: "rgba(250,247,255,0.7)",
+                      border: "1px solid rgba(124, 67, 189, 0.12)",
+                    }}
+                  >
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} mb={1}>
+                        <Controller
+                          name="username"
+                          control={control}
+                          rules={{
+                            required: "Name is required",
+                            minLength: {
+                              value: 3,
+                              message:
+                                "Name should be at least 3 characters long",
+                            },
+                          }}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Name"
+                              fullWidth
+                              error={!!errors.username}
+                              helperText={errors.username?.message}
+                            />
+                          )}
+                        />
+                      </Grid>
+                    </Grid>
+
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs>
+                        <Controller
+                          name="inputValue"
+                          control={control}
+                          rules={{
+                            required: "Value is required",
+                            validate: {
+                              isPositiveInteger: (value) =>
+                                (Number.isInteger(Number(value)) &&
+                                  Number(value) > 0) ||
+                                "Value must be a positive integer",
+                              maxValue: (value) =>
+                                Number(value) <= 1000 ||
+                                "Value must not exceed 1000",
+                            },
+                          }}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Recite & Enter Count"
+                              type="number"
+                              fullWidth
+                              error={!!errors.inputValue}
+                              helperText={errors.inputValue?.message}
+                              sx={{
+                                mb: 2,
+                                "& .MuiOutlinedInput-root": {
+                                  height: commonHeight,
+                                },
+                                "& .MuiInputLabel-outlined": {
+                                  transform: "translate(14px, 16px) scale(1)",
+                                },
+                                "& .MuiInputLabel-outlined.MuiInputLabel-shrink":
+                                  {
+                                    transform:
+                                      "translate(14px, -6px) scale(0.75)",
+                                  },
+                              }}
+                              variant="outlined"
+                              inputProps={{
+                                min: 1,
+                                max: 1000,  
+                                placeholder: "Jesus Loves You",
+                              }}
+                              InputProps={{
+                                sx: {
+                                  borderRadius: 1,
+                                  bgcolor: "background.paper",
+                                },
+                              }}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm="auto">
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          type="submit"
+                          fullWidth
+                          disabled={isAddDisabled}
+                          startIcon={<AddIcon />}
+                          sx={{
+                            minWidth: "120px",
+                            height: 50,
+                            borderRadius: "12px",
+                            px: 2.5,
+                            fontWeight: 700,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            boxShadow:
+                              "0 10px 24px rgba(33, 150, 243, 0.28)",
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+
                 <Grid item xs={12}>
                   <Box
                     sx={{
-                      mb: 3,
+                      mb: 3,mt:3,
                       textAlign: "center",
                       backgroundColor: "#4a148c",
                       backgroundImage:
@@ -1149,123 +1270,7 @@ const Counter = () => {
                   </Grid>
                 </Grid>
 
-                <Grid item xs={12}>
-                  <Box
-                    component="form"
-                    onSubmit={handleSubmit(onSubmit)}
-                    sx={{
-                      p: { xs: 1.5, sm: 2 },
-                      borderRadius: 3,
-                      bgcolor: "rgba(250,247,255,0.7)",
-                      border: "1px solid rgba(124, 67, 189, 0.12)",
-                    }}
-                  >
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} mb={1}>
-                        <Controller
-                          name="username"
-                          control={control}
-                          rules={{
-                            required: "Full name is required",
-                            minLength: {
-                              value: 3,
-                              message:
-                                "Name should be at least 3 characters long",
-                            },
-                          }}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              label="Full Name"
-                              fullWidth
-                              error={!!errors.username}
-                              helperText={errors.username?.message}
-                            />
-                          )}
-                        />
-                      </Grid>
-                    </Grid>
-
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs>
-                        <Controller
-                          name="inputValue"
-                          control={control}
-                          rules={{
-                            required: "Value is required",
-                            validate: {
-                              isPositiveInteger: (value) =>
-                                (Number.isInteger(Number(value)) &&
-                                  Number(value) > 0) ||
-                                "Value must be a positive integer",
-                              maxValue: (value) =>
-                                Number(value) <= 1000 ||
-                                "Value must not exceed 1000",
-                            },
-                          }}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              label="Count Value"
-                              type="number"
-                              fullWidth
-                              error={!!errors.inputValue}
-                              helperText={errors.inputValue?.message}
-                              sx={{
-                                mb: 2,
-                                "& .MuiOutlinedInput-root": {
-                                  height: commonHeight,
-                                },
-                                "& .MuiInputLabel-outlined": {
-                                  transform: "translate(14px, 16px) scale(1)",
-                                },
-                                "& .MuiInputLabel-outlined.MuiInputLabel-shrink":
-                                  {
-                                    transform:
-                                      "translate(14px, -6px) scale(0.75)",
-                                  },
-                              }}
-                              variant="outlined"
-                              inputProps={{
-                                min: 1,
-                                max: 1000,
-                              }}
-                              InputProps={{
-                                sx: {
-                                  borderRadius: 1,
-                                  bgcolor: "background.paper",
-                                },
-                              }}
-                            />
-                          )}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm="auto">
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          type="submit"
-                          fullWidth
-                          disabled={isAddDisabled}
-                          startIcon={<AddIcon />}
-                          sx={{
-                            minWidth: "120px",
-                            height: 50,
-                            borderRadius: "12px",
-                            px: 2.5,
-                            fontWeight: 700,
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
-                            boxShadow:
-                              "0 10px 24px rgba(33, 150, 243, 0.28)",
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                </Grid>
+                
 
                 {shouldShowLogs ? (
   <Grid item xs={12}>
