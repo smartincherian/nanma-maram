@@ -3,6 +3,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -14,8 +15,7 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
-import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import TouchAppRoundedIcon from "@mui/icons-material/TouchAppRounded";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   SnackbarContext,
@@ -52,7 +52,7 @@ import {
 import SlotRow from "./SlotRow";
 import BookingDrawer from "./BookingDrawer";
 import ProfileBar from "./ProfileBar";
-import CreditsSheet from "./CreditsSheet";
+import ChapelFooter from "../../components/ChapelFooter";
 import LeaderGate from "./LeaderGate";
 
 const LEADER_UNLOCK_KEY = "powerLeaderUnlock";
@@ -85,10 +85,25 @@ const SlotBookingEvent = () => {
   const [myBookingIds, setMyBookingIds] = useState(() => getMyBookingIds());
   const [drawer, setDrawer] = useState(null); // null | { mode: "book"|"profile", slot?, forOthers? }
   const [bookFor, setBookFor] = useState("self"); // "self" | "others"
-  const [showCredits, setShowCredits] = useState(false);
   const [leaderUnlocked, setLeaderUnlocked] = useState(
     () => sessionStorage.getItem(LEADER_UNLOCK_KEY) === "1"
   );
+
+  // Flatten the header's rounded top corners once it sticks to the very top of
+  // the viewport while scrolling; keep them rounded when at rest.
+  const [headerStuck, setHeaderStuck] = useState(false);
+  const headerSentinelRef = useRef(null);
+
+  useEffect(() => {
+    const sentinel = headerSentinelRef.current;
+    if (!sentinel) return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeaderStuck(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [event]);
 
   // Subscribe to the event document.
   useEffect(() => {
@@ -309,20 +324,26 @@ const SlotBookingEvent = () => {
         color: "#3a2b06",
         background:
           "linear-gradient(135deg, #e7c35a 0%, #caa23c 55%, #b68a26 100%)",
-        boxShadow: "0 12px 26px rgba(178, 138, 38, 0.34)",
+        boxShadow: "none",
+        transition: "transform 0.18s ease",
         "&:hover": {
           background:
             "linear-gradient(135deg, #edcb66 0%, #d0a942 55%, #bd9029 100%)",
+          boxShadow: "none",
+          transform: "translateY(-2px)",
         },
       }
     : {
         color: "#f4f7ff",
         background:
           "linear-gradient(135deg, #4a4ec9 0%, #2c2f8f 55%, #1c1e63 100%)",
-        boxShadow: "0 12px 26px rgba(28, 30, 99, 0.36)",
+        boxShadow: "none",
+        transition: "transform 0.18s ease",
         "&:hover": {
           background:
             "linear-gradient(135deg, #565ad6 0%, #34379c 55%, #23266f 100%)",
+          boxShadow: "none",
+          transform: "translateY(-2px)",
         },
       };
 
@@ -342,8 +363,10 @@ const SlotBookingEvent = () => {
           background: MARIAN.white,
         }}
       >
-        {/* Fixed header — circular badge + chapel name + date, stays visible
-            while scrolling */}
+        {/* Sentinel: when this scrolls out of view, the header is stuck. */}
+        <Box ref={headerSentinelRef} sx={{ height: 0 }} />
+        {/* Fixed header — badge + chapel name + date, stays visible while
+            scrolling. Rounded top corners flatten once it sticks to the top. */}
         <Box
           sx={{
             position: "sticky",
@@ -354,8 +377,9 @@ const SlotBookingEvent = () => {
             background: MARIAN_HEADER_BG,
             color: MARIAN.white,
             boxShadow: "0 4px 14px rgba(58, 106, 191, 0.22)",
-            borderTopLeftRadius: "16px",
-            borderTopRightRadius: "16px",
+            borderTopLeftRadius: headerStuck ? 0 : "16px",
+            borderTopRightRadius: headerStuck ? 0 : "16px",
+            transition: "border-radius 0.18s ease",
           }}
         >
           <Box
@@ -368,13 +392,13 @@ const SlotBookingEvent = () => {
           >
             <Box
               component="img"
-              src="/images/chapel-banner.png"
+              src={event.image || "/images/chapel-banner.png"}
               alt="Nanma Maram Chapel"
               sx={{
                 flexShrink: 0,
-                width: { xs: 46, sm: 52 },
-                height: { xs: 46, sm: 52 },
-                borderRadius: "50%",
+                width: { xs: 112, sm: 132 },
+                height: { xs: 84, sm: 99 },
+                borderRadius: 2.5,
                 objectFit: "cover",
                 border: "2px solid rgba(255,255,255,0.55)",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
@@ -426,7 +450,7 @@ const SlotBookingEvent = () => {
           <Button
             fullWidth
             variant="contained"
-            endIcon={<ArrowForwardRoundedIcon />}
+            endIcon={<TouchAppRoundedIcon />}
             href={ZOOM_URL}
             target="_blank"
             rel="noopener noreferrer"
@@ -438,8 +462,7 @@ const SlotBookingEvent = () => {
               ...enterChapelSx,
             }}
           >
-            Enter the Chapel
-          </Button>
+ചാപ്പലിൽ പ്രവേശിക്കാൻ ഇവിടെ ക്ലിക്ക് ചെയുക           </Button>
         </Box>
 
         {/* Saved name */}
@@ -498,29 +521,7 @@ const SlotBookingEvent = () => {
         <Box sx={{ pb: 1.5 }} />
       </Paper>
 
-      {/* Almost-hidden credits trigger — a small sparkle icon */}
-      <Box sx={{ textAlign: "center", mt: 1.5 }}>
-        <Box
-          component="button"
-          type="button"
-          onClick={() => setShowCredits(true)}
-          aria-label="Credits"
-          title="Credits"
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            color: "rgba(27, 42, 74, 0.28)",
-            p: 0.5,
-            "&:hover": { color: "rgba(27, 42, 74, 0.55)" },
-          }}
-        >
-          <AutoAwesomeRoundedIcon sx={{ fontSize: 13 }} />
-        </Box>
-      </Box>
+      <ChapelFooter />
 
       <BookingDrawer
         open={Boolean(drawer)}
@@ -533,7 +534,6 @@ const SlotBookingEvent = () => {
         onSubmit={handleDrawerSubmit}
       />
 
-      <CreditsSheet open={showCredits} onClose={() => setShowCredits(false)} />
 
       <LeaderGate
         open={leaderMode && !leaderUnlocked}

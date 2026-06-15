@@ -13,14 +13,18 @@ import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import { MARIAN } from "../../utils/chapelTheme";
 
-// AM slots wear a warm gold accent, PM slots a cool blue one — so morning and
-// evening hours are instantly distinguishable while scanning the day.
-const AM_ACCENT = MARIAN.gold; // #caa23c
-const AM_TINT = "rgba(202, 162, 60, 0.07)";
-const PM_ACCENT = MARIAN.blue; // #2a4fa0
-const PM_TINT = "rgba(42, 79, 160, 0.06)";
+// A booked slot wears a single WhatsApp green — the same "taken" signal for
+// every slot, morning or evening. Locked slots stay gray (a different state).
+const FILLED_ACCENT = "#25D366"; // WhatsApp green
+const FILLED_TINT = "rgba(37, 211, 102, 0.1)";
 const LOCK_ACCENT = "#9aa3b2";
 const LOCK_TINT = "rgba(120, 130, 150, 0.1)";
+
+// Morning vs evening is conveyed purely by the time-label colour, kept on-theme:
+// a deep amber/bronze for AM, the Madonna blue for PM. Both sit at a similar
+// dark weight so they read as a matched pair (warm vs cool), not mismatched.
+const AM_TEXT = " #9a6a17"; // deep amber/bronze (refined, no olive cast)
+const PM_TEXT = MARIAN.deep; // ultramarine
 
 const SlotRow = ({
   slot,
@@ -36,9 +40,11 @@ const SlotRow = ({
   const count = bookings.length;
   const hasBookings = count > 0;
 
+  const accent = locked ? LOCK_ACCENT : FILLED_ACCENT;
+  const tint = locked ? LOCK_TINT : FILLED_TINT;
+
   const isAM = Number(slot.key.slice(0, 2)) < 12;
-  const accent = locked ? LOCK_ACCENT : isAM ? AM_ACCENT : PM_ACCENT;
-  const tint = locked ? LOCK_TINT : isAM ? AM_TINT : PM_TINT;
+  const labelColor = isAM ? AM_TEXT : PM_TEXT;
 
   // A locked slot is frozen for everyone but the leader.
   const frozen = locked && !leaderMode && !isMine;
@@ -85,8 +91,8 @@ const SlotRow = ({
           <Stack direction="row" alignItems="center" spacing={0.75}>
             <Typography
               sx={{
-                fontWeight: 600,
-                color: isMine ? MARIAN.deep : MARIAN.ink,
+                fontWeight: isMine ? 700 : 600,
+                color: labelColor,
                 fontSize: "1.02rem",
               }}
             >

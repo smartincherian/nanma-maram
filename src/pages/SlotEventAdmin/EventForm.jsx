@@ -1,6 +1,7 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Divider,
@@ -17,6 +18,7 @@ import {
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
+import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
@@ -25,6 +27,10 @@ import { SLOT_LENGTH_OPTIONS } from "../../utils/chapelSlots";
 import { MARIAN, MARIAN_BUTTON_BG } from "../../utils/chapelTheme";
 import { createEvent, updateEvent } from "../../firebase/chapel/events";
 import FieldsBuilder, { makeField, makeNameField } from "./FieldsBuilder";
+import ImageCropDialog from "./ImageCropDialog";
+
+const DEFAULT_BADGE = "/images/chapel-banner.png";
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB input cap
 
 const defaultFields = () => [
   makeNameField(),
@@ -58,8 +64,35 @@ const EventForm = ({ event, onBack, onSaved }) => {
   const [slotMinutes, setSlotMinutes] = useState(event?.slotMinutes || 30);
   const [active, setActive] = useState(event?.active ?? true);
   const [fields, setFields] = useState(() => normalizeFields(event?.fields));
+  const [image, setImage] = useState(event?.image || "");
+  const [cropSrc, setCropSrc] = useState(""); // source for the crop dialog
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
+
+  const handlePickFile = (e) => {
+    const file = e.target.files?.[0];
+    // Reset the input so picking the same file again still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showSnackbar(
+        "Please choose an image file.",
+        SNACK_BAR_SEVERITY_TYPES.ERROR
+      );
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      showSnackbar(
+        "Please choose an image under 5 MB.",
+        SNACK_BAR_SEVERITY_TYPES.ERROR
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  };
 
   const validate = () => {
     if (!heading.trim()) return "Please enter a heading.";
@@ -89,6 +122,7 @@ const EventForm = ({ event, onBack, onSaved }) => {
         endDate: mode === "range" ? endDate : null,
         slotMinutes,
         active,
+        image, // base64 data-URL, or "" to fall back to the default badge
         fields: fields.map((f) => ({
           id: f.id,
           label: f.label.trim(),
@@ -166,6 +200,61 @@ const EventForm = ({ event, onBack, onSaved }) => {
           multiline
           minRows={2}
         />
+
+        <Box>
+          <Typography sx={{ fontWeight: 700, color: MARIAN.ink, mb: 1 }}>
+            Badge image
+          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar
+              src={image || DEFAULT_BADGE}
+              alt="Event badge"
+              sx={{
+                width: 64,
+                height: 64,
+                border: `2px solid ${MARIAN.border}`,
+              }}
+            />
+            <Stack spacing={1}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<PhotoCameraRoundedIcon />}
+                onClick={() => fileInputRef.current?.click()}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  color: MARIAN.blue,
+                  borderColor: MARIAN.border,
+                }}
+              >
+                Upload image
+              </Button>
+              {image ? (
+                <Button
+                  size="small"
+                  onClick={() => setImage("")}
+                  sx={{ textTransform: "none", color: MARIAN.inkSoft }}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </Stack>
+          </Stack>
+          <Typography
+            variant="caption"
+            sx={{ color: MARIAN.inkSoft, display: "block", mt: 1 }}
+          >
+            Square crop, up to 5 MB. Leave empty to use the default image.
+          </Typography>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handlePickFile}
+          />
+        </Box>
 
         <Divider />
 
@@ -264,6 +353,16 @@ const EventForm = ({ event, onBack, onSaved }) => {
           </Button>
         </Box>
       </Stack>
+
+      <ImageCropDialog
+        open={Boolean(cropSrc)}
+        imageSrc={cropSrc}
+        onCancel={() => setCropSrc("")}
+        onConfirm={(dataUrl) => {
+          setImage(dataUrl);
+          setCropSrc("");
+        }}
+      />
     </Paper>
   );
 };

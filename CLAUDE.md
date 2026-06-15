@@ -14,6 +14,10 @@ npm test -- --testPathPattern=App  # run one test file
 
 Deploy: `firebase deploy` (targets the `nanma-maram` Firebase project; deploys `build/` to Hosting).
 
+## Versioning
+
+Bump the `version` in `package.json` (semver) with every meaningful change — patch for fixes/tweaks, minor for new features, major for breaking changes. This version is surfaced in the app footer (`ChapelFooter`) via `REACT_APP_VERSION`, so keeping it current is how releases are identified. Use `npm version patch|minor|major --no-git-tag-version` to bump without creating a git tag.
+
 ## Architecture
 
 **Nanma Maram** is a React 18 SPA (Create React App) for Catholic group prayer tracking. Users submit prayer intentions, then anyone can increment a shared counter for each intention.

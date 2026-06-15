@@ -5,7 +5,13 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Divider,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  ListSubheader,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
   Tooltip,
@@ -15,6 +21,9 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import TodayRoundedIcon from "@mui/icons-material/TodayRounded";
+import EventRoundedIcon from "@mui/icons-material/EventRounded";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +32,11 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { fetchEvents } from "../../firebase/chapel/events";
-import { formatDateKey, getToday } from "../../utils/chapelSlots";
+import {
+  formatDateKey,
+  formatDateLabel,
+  getToday,
+} from "../../utils/chapelSlots";
 import {
   MARIAN,
   MARIAN_BUTTON_BG,
@@ -31,16 +44,12 @@ import {
 } from "../../utils/chapelTheme";
 import EventForm from "./EventForm";
 import BookingsSheet from "./BookingsSheet";
+import ChapelFooter from "../../components/ChapelFooter";
 
-// Every shared link carries a date. Range events open on their start date;
-// daily events open on today.
-const buildBookingPath = (event) => {
-  const date =
-    event.mode === "range" && event.startDate
-      ? event.startDate
-      : formatDateKey(getToday());
-  return `/chapel/${event.id}/${date}`;
-};
+// Every shared link carries a date. `leader` appends /power for the locking
+// leader view.
+const buildBookingPath = (event, dateKey, leader) =>
+  `/chapel/${event.id}/${dateKey}${leader ? "/power" : ""}`;
 
 const SlotEventAdmin = () => {
   const navigate = useNavigate();
@@ -51,6 +60,7 @@ const SlotEventAdmin = () => {
   const [view, setView] = useState("list"); // "list" | "form"
   const [editing, setEditing] = useState(null);
   const [viewingBookings, setViewingBookings] = useState(null); // event | null
+  const [linkMenu, setLinkMenu] = useState(null); // { anchorEl, event, leader } | null
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -68,13 +78,34 @@ const SlotEventAdmin = () => {
     loadEvents();
   }, [loadEvents]);
 
-  const handleCopyLink = async (event) => {
-    const url = `${window.location.origin}${buildBookingPath(event)}`;
+  const openLinkMenu = (e, event, leader) =>
+    setLinkMenu({ anchorEl: e.currentTarget, event, leader });
+  const closeLinkMenu = () => setLinkMenu(null);
+
+  const handleOpenLink = (dateKey) => {
+    navigate(buildBookingPath(linkMenu.event, dateKey, linkMenu.leader));
+    closeLinkMenu();
+  };
+
+  const handleCopyLink = async (dateKey) => {
+    const { event, leader } = linkMenu;
+    const url = `${window.location.origin}${buildBookingPath(
+      event,
+      dateKey,
+      leader
+    )}`;
+    closeLinkMenu();
     try {
       await navigator.clipboard.writeText(url);
-      showSnackbar("Booking link copied.", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      showSnackbar(
+        leader ? "Leader link copied." : "Booking link copied.",
+        SNACK_BAR_SEVERITY_TYPES.SUCCESS
+      );
     } catch {
-      window.prompt("Copy this booking link:", url);
+      window.prompt(
+        leader ? "Copy this leader link:" : "Copy this booking link:",
+        url
+      );
     }
   };
 
@@ -230,20 +261,20 @@ const SlotEventAdmin = () => {
                       <EditRoundedIcon />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Copy booking link">
+                  <Tooltip title="Booking link">
                     <IconButton
                       sx={{ color: MARIAN.blue }}
-                      onClick={() => handleCopyLink(event)}
+                      onClick={(e) => openLinkMenu(e, event, false)}
                     >
                       <LinkRoundedIcon />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Open booking page">
+                  <Tooltip title="Leader link (/power)">
                     <IconButton
-                      sx={{ color: MARIAN.blue }}
-                      onClick={() => navigate(buildBookingPath(event))}
+                      sx={{ color: MARIAN.gold }}
+                      onClick={(e) => openLinkMenu(e, event, true)}
                     >
-                      <OpenInNewRoundedIcon />
+                      <LinkRoundedIcon />
                     </IconButton>
                   </Tooltip>
                 </Stack>
@@ -252,7 +283,76 @@ const SlotEventAdmin = () => {
           ))}
         </Stack>
       )}
+
+      <ChapelFooter />
     </Container>
+
+    <Menu
+      anchorEl={linkMenu?.anchorEl}
+      open={Boolean(linkMenu)}
+      onClose={closeLinkMenu}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+    >
+      <Typography
+        sx={{
+          px: 2,
+          pt: 1,
+          pb: 0.5,
+          fontSize: "0.72rem",
+          fontWeight: 800,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: linkMenu?.leader ? MARIAN.gold : MARIAN.blue,
+        }}
+      >
+        {linkMenu?.leader ? "Leaders Link" : "Public Link"}
+      </Typography>
+      {[
+        { date: getToday(), label: "Today", Icon: TodayRoundedIcon },
+        { date: getToday().add(1, "day"), label: "Tomorrow", Icon: EventRoundedIcon },
+      ].flatMap(({ date, label, Icon }, idx) => {
+        const dateKey = formatDateKey(date);
+        const items = [
+          <ListSubheader
+            key={`${label}-head`}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.75,
+              color: MARIAN.deep,
+              fontWeight: 700,
+              lineHeight: 2.2,
+            }}
+          >
+            <Icon fontSize="small" />
+            {label}
+            <Typography
+              component="span"
+              variant="caption"
+              sx={{ color: MARIAN.inkSoft, fontWeight: 500 }}
+            >
+              · {formatDateLabel(date)}
+            </Typography>
+          </ListSubheader>,
+          <MenuItem key={`${label}-open`} onClick={() => handleOpenLink(dateKey)}>
+            <ListItemIcon>
+              <OpenInNewRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Open</ListItemText>
+          </MenuItem>,
+          <MenuItem key={`${label}-copy`} onClick={() => handleCopyLink(dateKey)}>
+            <ListItemIcon>
+              <ContentCopyRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Copy</ListItemText>
+          </MenuItem>,
+        ];
+        return idx === 0
+          ? [...items, <Divider key={`${label}-div`} />]
+          : items;
+      })}
+    </Menu>
 
     <BookingsSheet
       open={Boolean(viewingBookings)}

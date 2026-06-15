@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Drawer, IconButton, Stack, Typography } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { MARIAN, MARIAN_HEADER_BG } from "../../utils/chapelTheme";
+import TauCrossIcon from "../../components/TauCrossIcon";
 
 // A single table row: label on the left, value on the right.
 const Row = ({ icon, label, value, accent }) => (
@@ -94,15 +95,11 @@ const CreditsSheet = ({ open, onClose }) => (
         justifyContent="center"
         spacing={1.25}
       >
-        <Typography sx={{ fontSize: "1.05rem", lineHeight: 1, opacity: 0.9 }}>
-          ✝
-        </Typography>
+        <TauCrossIcon sx={{ fontSize: 18, opacity: 0.9 }} />
         <Typography sx={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "0.02em" }}>
           All Glory to God
         </Typography>
-        <Typography sx={{ fontSize: "1.05rem", lineHeight: 1, opacity: 0.9 }}>
-          ✝
-        </Typography>
+        <TauCrossIcon sx={{ fontSize: 18, opacity: 0.9 }} />
       </Stack>
     </Box>
 
