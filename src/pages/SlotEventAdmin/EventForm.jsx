@@ -1,0 +1,271 @@
+import React, { useContext, useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Radio,
+  RadioGroup,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
+} from "@mui/material";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
+import {
+  SnackbarContext,
+  SNACK_BAR_SEVERITY_TYPES,
+} from "../../components/Snackbar";
+import { SLOT_LENGTH_OPTIONS } from "../../utils/chapelSlots";
+import { MARIAN, MARIAN_BUTTON_BG } from "../../utils/chapelTheme";
+import { createEvent, updateEvent } from "../../firebase/chapel/events";
+import FieldsBuilder, { makeField, makeNameField } from "./FieldsBuilder";
+
+const defaultFields = () => [
+  makeNameField(),
+  makeField({ label: "Phone", type: "phone" }),
+];
+
+// Guarantee the saved fields start with a single locked Name display field
+// (covers brand-new events and any older data without one).
+const normalizeFields = (saved) => {
+  if (!saved?.length) return defaultFields();
+  const existingName = saved.find((f) => f.locked || f.isDisplayName);
+  const nameField = {
+    ...makeNameField(),
+    ...(existingName ? { id: existingName.id } : {}),
+  };
+  const extras = saved
+    .filter((f) => f.id !== nameField.id && !f.locked && !f.isDisplayName)
+    .map((f) => ({ ...makeField(), ...f, isDisplayName: false, locked: false }));
+  return [nameField, ...extras];
+};
+
+const EventForm = ({ event, onBack, onSaved }) => {
+  const isEdit = Boolean(event?.id);
+  const { showSnackbar } = useContext(SnackbarContext);
+
+  const [heading, setHeading] = useState(event?.heading || "");
+  const [description, setDescription] = useState(event?.description || "");
+  const [mode, setMode] = useState(event?.mode || "daily");
+  const [startDate, setStartDate] = useState(event?.startDate || "");
+  const [endDate, setEndDate] = useState(event?.endDate || "");
+  const [slotMinutes, setSlotMinutes] = useState(event?.slotMinutes || 30);
+  const [active, setActive] = useState(event?.active ?? true);
+  const [fields, setFields] = useState(() => normalizeFields(event?.fields));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const validate = () => {
+    if (!heading.trim()) return "Please enter a heading.";
+    if (fields.some((f) => !f.label.trim()))
+      return "Every field needs a label.";
+    if (mode === "range") {
+      if (!startDate || !endDate) return "Pick a start and end date.";
+      if (startDate > endDate) return "Start date must be on or before end date.";
+    }
+    return "";
+  };
+
+  const handleSave = async () => {
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      const payload = {
+        heading: heading.trim(),
+        description: description.trim(),
+        mode,
+        startDate: mode === "range" ? startDate : null,
+        endDate: mode === "range" ? endDate : null,
+        slotMinutes,
+        active,
+        fields: fields.map((f) => ({
+          id: f.id,
+          label: f.label.trim(),
+          type: f.type,
+          required: Boolean(f.required),
+          isDisplayName: Boolean(f.isDisplayName),
+          locked: Boolean(f.locked),
+        })),
+      };
+
+      if (isEdit) {
+        await updateEvent(event.id, payload);
+      } else {
+        await createEvent(payload);
+      }
+      showSnackbar("Event saved.", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      onSaved();
+    } catch (err) {
+      console.error(err);
+      setError("Could not save the event. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 2.5, sm: 3.5 },
+        borderRadius: 4,
+        border: `1px solid ${MARIAN.border}`,
+        background: "linear-gradient(180deg, #ffffff 0%, #f5f8fe 100%)",
+        boxShadow: "0 20px 50px rgba(21, 50, 122, 0.1)",
+      }}
+    >
+      <Stack spacing={2.5}>
+        <Button
+          startIcon={<ArrowBackRoundedIcon />}
+          onClick={onBack}
+          sx={{
+            alignSelf: "flex-start",
+            textTransform: "none",
+            color: MARIAN.blue,
+          }}
+        >
+          Back to events
+        </Button>
+
+        <Typography
+          variant="h5"
+          sx={{ fontWeight: 800, color: MARIAN.deep }}
+        >
+          {isEdit ? "Edit event" : "New event"}
+        </Typography>
+
+        {error ? (
+          <Alert severity="error" sx={{ borderRadius: 2 }}>
+            {error}
+          </Alert>
+        ) : null}
+
+        <TextField
+          label="Heading"
+          value={heading}
+          onChange={(e) => setHeading(e.target.value)}
+          required
+          fullWidth
+        />
+        <TextField
+          label="Description (optional)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          fullWidth
+          multiline
+          minRows={2}
+        />
+
+        <Divider />
+
+        <FormControl>
+          <Typography sx={{ fontWeight: 700, color: MARIAN.ink, mb: 0.5 }}>
+            When can people book?
+          </Typography>
+          <RadioGroup
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+          >
+            <FormControlLabel
+              value="daily"
+              control={<Radio />}
+              label="Daily"
+            />
+            <FormControlLabel
+              value="range"
+              control={<Radio />}
+              label="Specific date range"
+            />
+          </RadioGroup>
+        </FormControl>
+
+        {mode === "range" ? (
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              label="Start date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+            <TextField
+              label="End date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+          </Stack>
+        ) : null}
+
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ sm: "center" }}
+        >
+          <TextField
+            select
+            label="Slot length"
+            value={slotMinutes}
+            onChange={(e) => setSlotMinutes(Number(e.target.value))}
+            sx={{ minWidth: { xs: "100%", sm: 180 } }}
+          >
+            {SLOT_LENGTH_OPTIONS.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option} minutes
+              </MenuItem>
+            ))}
+          </TextField>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
+            }
+            label="Active"
+          />
+        </Stack>
+
+        <Divider />
+
+        <FieldsBuilder fields={fields} onChange={setFields} />
+
+        <Box>
+          <Button
+            variant="contained"
+            startIcon={<SaveRoundedIcon />}
+            onClick={handleSave}
+            disabled={saving}
+            sx={{
+              textTransform: "none",
+              fontWeight: 800,
+              px: 4,
+              py: 1.25,
+              borderRadius: 2.5,
+              background: MARIAN_BUTTON_BG,
+              boxShadow: "0 12px 26px rgba(21, 50, 122, 0.22)",
+            }}
+          >
+            {saving ? "Saving…" : "Save event"}
+          </Button>
+        </Box>
+      </Stack>
+    </Paper>
+  );
+};
+
+export default EventForm;

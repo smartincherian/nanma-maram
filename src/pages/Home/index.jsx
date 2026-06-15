@@ -53,8 +53,8 @@ const Home = () => {
       path: "/teens-personal-prayer",
     },
     {
-      text: "Zoom Slot Booking",
-      helper: "Reserve chapel and meeting slots",
+      text: "Chapel Slot Booking",
+      helper: "Create & manage prayer slot events",
       icon: <ContactMailIcon />,
       path: "/chapel-slot",
     },

@@ -17,7 +17,8 @@ import TeensPersonalPrayerDashboard from "./pages/TeensPrayerDashboard";
 import TeensGame from "./pages/TeensGame";
 import PrayerBank from "./pages/PrayerBank";
 import Register from "./pages/PrayerBank/Register";
-import SlotBooking from "./pages/SlotBooking";
+import SlotEventAdmin from "./pages/SlotEventAdmin";
+import SlotBookingEvent from "./pages/SlotBookingEvent";
 import AdminRouteGate, {
   hasLeaderAccess,
 } from "./components/AdminRouteGate";
@@ -130,14 +131,30 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/chapel-slot"
-            element={
-              <ProtectedRoute>
-                <SlotBooking />
-              </ProtectedRoute>
-            }
-          />
+          {["/chapel-slot", "/chapel", "/event"].map((base) => (
+            <React.Fragment key={base}>
+              <Route
+                path={base}
+                element={
+                  <ProtectedRoute>
+                    <SlotEventAdmin />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={`${base}/:eventId`}
+                element={<SlotBookingEvent />}
+              />
+              <Route
+                path={`${base}/:eventId/:date`}
+                element={<SlotBookingEvent />}
+              />
+              <Route
+                path={`${base}/:eventId/:date/power`}
+                element={<SlotBookingEvent />}
+              />
+            </React.Fragment>
+          ))}
         </Routes>
       </BrowserRouter>
     </SnackbarProvider>
