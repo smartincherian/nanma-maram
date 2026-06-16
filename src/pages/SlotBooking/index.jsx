@@ -207,7 +207,10 @@ const SlotBooking = () => {
       setRepeatDates([]);
       setRepeatEnabled(false);
       await loadBookings();
-      showSnackbar("Praise God 🙏", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      showSnackbar(
+        "Slots booked — Praise Jesus 🙏",
+        SNACK_BAR_SEVERITY_TYPES.SUCCESS
+      );
     } catch (err) {
       console.error(err);
       setError("Booking failed. Please try again.");

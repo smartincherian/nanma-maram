@@ -310,13 +310,30 @@ const BookingsSheet = ({ open, event, onClose }) => {
                         background: b.locked ? MARIAN.goldSoft : MARIAN.skySoft,
                       }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={0.75}>
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={0.75}
+                      >
                         <Typography sx={{ fontWeight: 700, color: MARIAN.deep }}>
                           {fieldValue(b, displayField) || "Guest"}
                         </Typography>
                         {b.locked ? (
                           <LockRoundedIcon sx={{ fontSize: 15, color: "#8a6d1f" }} />
                         ) : null}
+                        <Typography
+                          sx={{
+                            ml: "auto",
+                            pl: 1,
+                            fontSize: "0.6rem",
+                            color: MARIAN.inkSoft,
+                            opacity: 0.5,
+                            fontFamily: "monospace",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {b.id}
+                        </Typography>
                       </Stack>
                       {otherFields.map((f) => (
                         <Typography

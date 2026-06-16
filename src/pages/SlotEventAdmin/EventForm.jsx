@@ -23,10 +23,11 @@ import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
-import { SLOT_LENGTH_OPTIONS } from "../../utils/chapelSlots";
+import { SLOT_LENGTH_OPTIONS, formatSlotLength } from "../../utils/chapelSlots";
 import { MARIAN, MARIAN_BUTTON_BG } from "../../utils/chapelTheme";
 import { createEvent, updateEvent } from "../../firebase/chapel/events";
 import FieldsBuilder, { makeField, makeNameField } from "./FieldsBuilder";
+import ReservationsBuilder, { makeReservation } from "./ReservationsBuilder";
 import ImageCropDialog from "./ImageCropDialog";
 
 const DEFAULT_BADGE = "/images/chapel-banner.png";
@@ -52,6 +53,16 @@ const normalizeFields = (saved) => {
   return [nameField, ...extras];
 };
 
+// Rebuild saved reservations into editable entries (guarantees id + shape).
+const normalizeReservations = (saved) =>
+  (saved || []).map((r) =>
+    makeReservation({
+      id: r.id,
+      name: r.name || "",
+      slotKeys: Array.isArray(r.slotKeys) ? r.slotKeys : [],
+    })
+  );
+
 const EventForm = ({ event, onBack, onSaved }) => {
   const isEdit = Boolean(event?.id);
   const { showSnackbar } = useContext(SnackbarContext);
@@ -64,6 +75,9 @@ const EventForm = ({ event, onBack, onSaved }) => {
   const [slotMinutes, setSlotMinutes] = useState(event?.slotMinutes || 30);
   const [active, setActive] = useState(event?.active ?? true);
   const [fields, setFields] = useState(() => normalizeFields(event?.fields));
+  const [reservations, setReservations] = useState(() =>
+    normalizeReservations(event?.reservations)
+  );
   const [image, setImage] = useState(event?.image || "");
   const [cropSrc, setCropSrc] = useState(""); // source for the crop dialog
   const [saving, setSaving] = useState(false);
@@ -131,6 +145,14 @@ const EventForm = ({ event, onBack, onSaved }) => {
           isDisplayName: Boolean(f.isDisplayName),
           locked: Boolean(f.locked),
         })),
+        // Drop blank/incomplete reservations (needs both a name and ≥1 slot).
+        reservations: reservations
+          .map((r) => ({
+            id: r.id,
+            name: r.name.trim(),
+            slotKeys: r.slotKeys || [],
+          }))
+          .filter((r) => r.name && r.slotKeys.length),
       };
 
       if (isEdit) {
@@ -138,7 +160,10 @@ const EventForm = ({ event, onBack, onSaved }) => {
       } else {
         await createEvent(payload);
       }
-      showSnackbar("Event saved.", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      showSnackbar(
+        "Event saved — God bless 🙏",
+        SNACK_BAR_SEVERITY_TYPES.SUCCESS
+      );
       onSaved();
     } catch (err) {
       console.error(err);
@@ -314,7 +339,7 @@ const EventForm = ({ event, onBack, onSaved }) => {
           >
             {SLOT_LENGTH_OPTIONS.map((option) => (
               <MenuItem key={option} value={option}>
-                {option} minutes
+                {formatSlotLength(option)}
               </MenuItem>
             ))}
           </TextField>
@@ -332,6 +357,14 @@ const EventForm = ({ event, onBack, onSaved }) => {
         <Divider />
 
         <FieldsBuilder fields={fields} onChange={setFields} />
+
+        <Divider />
+
+        <ReservationsBuilder
+          reservations={reservations}
+          slotMinutes={slotMinutes}
+          onChange={setReservations}
+        />
 
         <Box>
           <Button

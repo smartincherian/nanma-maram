@@ -76,7 +76,9 @@ const BookingDrawer = ({
     try {
       await onSubmit(trimmed);
       showSnackbar(
-        mode === "book" ? "Slot booked. Thank you!" : "Name saved.",
+        mode === "book"
+          ? "Slot booked — Praise Jesus 🙏"
+          : "Name saved — Ave Maria 🙏",
         SNACK_BAR_SEVERITY_TYPES.SUCCESS
       );
       onClose();

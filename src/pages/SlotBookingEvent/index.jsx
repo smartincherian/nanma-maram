@@ -27,8 +27,9 @@ import {
   generateSlots,
   getBookableWindow,
   getDefaultDate,
+  getReservedNames,
   isDateBookable,
-  parseDateKey,
+  resolveDateParam,
 } from "../../utils/chapelSlots";
 import { subscribeEvent } from "../../firebase/chapel/events";
 import {
@@ -53,9 +54,6 @@ import SlotRow from "./SlotRow";
 import BookingDrawer from "./BookingDrawer";
 import ProfileBar from "./ProfileBar";
 import ChapelFooter from "../../components/ChapelFooter";
-import LeaderGate from "./LeaderGate";
-
-const LEADER_UNLOCK_KEY = "powerLeaderUnlock";
 
 // Stable empty object for the "book for others" drawer — a fresh `{}` literal
 // per render would re-fire the drawer's reset effect on every bookings snapshot
@@ -85,9 +83,6 @@ const SlotBookingEvent = () => {
   const [myBookingIds, setMyBookingIds] = useState(() => getMyBookingIds());
   const [drawer, setDrawer] = useState(null); // null | { mode: "book"|"profile", slot?, forOthers? }
   const [bookFor, setBookFor] = useState("self"); // "self" | "others"
-  const [leaderUnlocked, setLeaderUnlocked] = useState(
-    () => sessionStorage.getItem(LEADER_UNLOCK_KEY) === "1"
-  );
 
   // Flatten the header's rounded top corners once it sticks to the very top of
   // the viewport while scrolling; keep them rounded when at rest.
@@ -112,10 +107,13 @@ const SlotBookingEvent = () => {
     return unsubscribe;
   }, [eventId]);
 
-  // Resolve the date: from URL if valid, else the event's default date.
+  // Resolve the date from the URL segment: a valid "YYYY-MM-DD" or a relative
+  // keyword ("today"/"tomorrow", anchored to IST). Anything else falls back to
+  // the event's default date. The redirect effect below rewrites a keyword in
+  // the address to the concrete IST date it resolved to.
   const selectedDate = useMemo(() => {
     if (!event) return null;
-    return parseDateKey(dateParam) || getDefaultDate(event);
+    return resolveDateParam(dateParam) || getDefaultDate(event);
   }, [event, dateParam]);
 
   const dateKey = selectedDate ? formatDateKey(selectedDate) : null;
@@ -171,6 +169,10 @@ const SlotBookingEvent = () => {
     [event]
   );
 
+  // Admin-defined reservations: { slotKey: name }. These slots are frozen for
+  // everyone (no per-date scope — they apply to every day the event runs).
+  const reservedBySlot = useMemo(() => getReservedNames(event), [event]);
+
   // Group bookings by slot key.
   const bookingsBySlot = useMemo(() => {
     const map = {};
@@ -221,8 +223,18 @@ const SlotBookingEvent = () => {
 
   // Left circle: book in one tap, or remove my booking if already booked.
   const handleCirclePress = async (slot) => {
-    // In leader mode, the gate must be unlocked before any booking action.
-    if (leaderMode && !leaderUnlocked) return;
+    // Admin-reserved slots are frozen for everyone — not bookable from the
+    // public page (including leader mode / book-for-others). Edit the event to
+    // change a reservation.
+    const reservedName = reservedBySlot[slot.key];
+    if (reservedName) {
+      showSnackbar(
+        `This slot is reserved for ${reservedName}.`,
+        SNACK_BAR_SEVERITY_TYPES.INFO
+      );
+      return;
+    }
+
     const slotBookings = bookingsBySlot[slot.key] || [];
 
     // Booking for someone else: never one-tap. A locked slot still blocks
@@ -262,7 +274,10 @@ const SlotBookingEvent = () => {
     });
     try {
       await persistBooking(slot.key, values, savedName, leaderMode);
-      showSnackbar("Slot booked. Thank you!", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      showSnackbar(
+        "Slot booked — Praise Jesus 🙏",
+        SNACK_BAR_SEVERITY_TYPES.SUCCESS
+      );
     } catch (err) {
       console.error(err);
       showSnackbar(
@@ -501,13 +516,17 @@ const SlotBookingEvent = () => {
           <Box sx={{ px: { xs: 1.5, sm: 2.5 }, py: 1 }}>
             {slots.map((slot) => {
               const slotBookings = bookingsBySlot[slot.key] || [];
+              const reservedName = reservedBySlot[slot.key];
               return (
                 <SlotRow
                   key={slot.key}
                   slot={slot}
                   bookings={slotBookings}
                   isMine={slotBookings.some(isBookingMine)}
-                  locked={slotBookings.some((b) => b.locked)}
+                  locked={
+                    Boolean(reservedName) || slotBookings.some((b) => b.locked)
+                  }
+                  reservedName={reservedName}
                   leaderMode={leaderMode}
                   isBookingMine={isBookingMine}
                   onCirclePress={handleCirclePress}
@@ -532,15 +551,6 @@ const SlotBookingEvent = () => {
         initialValues={drawer?.forOthers ? EMPTY_VALUES : profile}
         onClose={() => setDrawer(null)}
         onSubmit={handleDrawerSubmit}
-      />
-
-
-      <LeaderGate
-        open={leaderMode && !leaderUnlocked}
-        onUnlock={() => {
-          sessionStorage.setItem(LEADER_UNLOCK_KEY, "1");
-          setLeaderUnlocked(true);
-        }}
       />
     </Container>
     </Box>

@@ -78,8 +78,17 @@ const SlotEventAdmin = () => {
     loadEvents();
   }, [loadEvents]);
 
-  const openLinkMenu = (e, event, leader) =>
-    setLinkMenu({ anchorEl: e.currentTarget, event, leader });
+  // Capture the trigger's position as plain coordinates rather than holding a
+  // live DOM node: a node reference can be detached by a re-render before MUI
+  // measures it, which intermittently flings the menu to the top-left corner.
+  const openLinkMenu = (e, event, leader) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setLinkMenu({
+      anchorPosition: { top: rect.bottom, left: rect.right },
+      event,
+      leader,
+    });
+  };
   const closeLinkMenu = () => setLinkMenu(null);
 
   const handleOpenLink = (dateKey) => {
@@ -98,7 +107,9 @@ const SlotEventAdmin = () => {
     try {
       await navigator.clipboard.writeText(url);
       showSnackbar(
-        leader ? "Leader link copied." : "Booking link copied.",
+        leader
+          ? "Leader link copied — God bless 🙏"
+          : "Booking link copied — God bless 🙏",
         SNACK_BAR_SEVERITY_TYPES.SUCCESS
       );
     } catch {
@@ -288,10 +299,10 @@ const SlotEventAdmin = () => {
     </Container>
 
     <Menu
-      anchorEl={linkMenu?.anchorEl}
+      anchorReference="anchorPosition"
+      anchorPosition={linkMenu?.anchorPosition}
       open={Boolean(linkMenu)}
       onClose={closeLinkMenu}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       transformOrigin={{ vertical: "top", horizontal: "right" }}
     >
       <Typography

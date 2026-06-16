@@ -10,15 +10,14 @@ import RadioButtonUncheckedRoundedIcon from "@mui/icons-material/RadioButtonUnch
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import { MARIAN } from "../../utils/chapelTheme";
 
 // A booked slot wears a single WhatsApp green — the same "taken" signal for
-// every slot, morning or evening. Locked slots stay gray (a different state).
+// every slot. Reserved and leader-locked slots wear the same green (the name
+// chip already marks them as taken); the grey is only the dot's outer ring.
 const FILLED_ACCENT = "#25D366"; // WhatsApp green
 const FILLED_TINT = "rgba(37, 211, 102, 0.1)";
 const LOCK_ACCENT = "#9aa3b2";
-const LOCK_TINT = "rgba(120, 130, 150, 0.1)";
 
 // Morning vs evening is conveyed purely by the time-label colour, kept on-theme:
 // a deep amber/bronze for AM, the Madonna blue for PM. Both sit at a similar
@@ -31,6 +30,7 @@ const SlotRow = ({
   bookings,
   isMine,
   locked,
+  reservedName,
   leaderMode,
   isBookingMine,
   onCirclePress,
@@ -39,25 +39,25 @@ const SlotRow = ({
   const [expanded, setExpanded] = useState(false);
   const count = bookings.length;
   const hasBookings = count > 0;
+  const reserved = Boolean(reservedName);
 
-  const accent = locked ? LOCK_ACCENT : FILLED_ACCENT;
-  const tint = locked ? LOCK_TINT : FILLED_TINT;
+  // Admin-reserved and leader-locked slots both read as "taken" — the same green
+  // fill and chip as a booked slot (Divine Mercy look), no muted-gray state.
+  const accent = FILLED_ACCENT;
+  const tint = FILLED_TINT;
+  // Reserved/locked slots may have no bookings of their own but still show filled.
+  const filled = hasBookings || reserved || locked;
 
   const isAM = Number(slot.key.slice(0, 2)) < 12;
   const labelColor = isAM ? AM_TEXT : PM_TEXT;
 
-  // A locked slot is frozen for everyone but the leader.
-  const frozen = locked && !leaderMode && !isMine;
+  // An admin-reserved slot is frozen for everyone (no override). A leader-locked
+  // booking is frozen for everyone but the leader.
+  const frozen = Boolean(reservedName) || (locked && !leaderMode && !isMine);
 
-  let circleColor = "#9fb0cc";
-  let CircleIcon = RadioButtonUncheckedRoundedIcon;
-  if (isMine) {
-    circleColor = "#1f9c74";
-    CircleIcon = CheckCircleRoundedIcon;
-  } else if (locked) {
-    circleColor = LOCK_ACCENT;
-    CircleIcon = LockRoundedIcon;
-  }
+  // Booked-by-me shows a green check; reserved/locked slots show the same green
+  // dot as Divine Mercy — the name chip already says it's taken, so no padlock.
+  const circleColor = isMine ? "#1f9c74" : "#9fb0cc";
 
   return (
     <Box
@@ -66,7 +66,7 @@ const SlotRow = ({
         px: 1.25,
         py: 1,
         borderRadius: 2,
-        background: hasBookings ? tint : "transparent",
+        background: filled ? tint : "transparent",
         border: "1px solid rgba(42, 79, 160, 0.08)",
         opacity: frozen ? 0.6 : 1,
       }}
@@ -75,7 +75,13 @@ const SlotRow = ({
         <IconButton
           onClick={() => onCirclePress(slot)}
           disabled={frozen}
-          sx={{ p: 0.5, color: circleColor }}
+          sx={{
+            p: 0.5,
+            color: circleColor,
+            // Keep the slot's own colour even when the button is disabled
+            // (a reserved slot stays green, not MUI's default disabled grey).
+            "&.Mui-disabled": { color: circleColor },
+          }}
           aria-label={
             isMine
               ? `Remove my booking for ${slot.label}`
@@ -84,16 +90,40 @@ const SlotRow = ({
               : `Book ${slot.label}`
           }
         >
-          <CircleIcon sx={{ fontSize: 27 }} />
+          {isMine ? (
+            <CheckCircleRoundedIcon sx={{ fontSize: 27 }} />
+          ) : reserved || locked ? (
+            // Reserved / locked: green fill inside a grey ring (Divine Mercy look).
+            <Box
+              sx={{
+                width: 21,
+                height: 21,
+                borderRadius: "50%",
+                bgcolor: FILLED_ACCENT,
+                border: `2px solid ${LOCK_ACCENT}`,
+                boxSizing: "border-box",
+              }}
+            />
+          ) : (
+            <RadioButtonUncheckedRoundedIcon sx={{ fontSize: 27 }} />
+          )}
         </IconButton>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.75}
+            flexWrap="wrap"
+            useFlexGap
+          >
             <Typography
               sx={{
                 fontWeight: isMine ? 700 : 600,
                 color: labelColor,
                 fontSize: "1.02rem",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {slot.label} to {slot.endLabel}
@@ -106,14 +136,16 @@ const SlotRow = ({
                   fontWeight: 700,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
-                  color: LOCK_ACCENT,
-                  border: `1px solid ${LOCK_ACCENT}`,
+                  color: accent,
+                  border: `1px solid ${accent}`,
                   borderRadius: 1,
+                  ml: "auto", // push the name to the right end of the row
+                  maxWidth: "100%",
                   px: 0.6,
                   py: 0.1,
                 }}
               >
-                Reserved
+                {reservedName || "Reserved"}
               </Box>
             ) : null}
           </Stack>
@@ -122,7 +154,7 @@ const SlotRow = ({
               mt: 0.75,
               height: 6,
               borderRadius: 3,
-              background: hasBookings
+              background: filled
                 ? `linear-gradient(90deg, ${accent} 0%, ${accent} 100%)`
                 : "rgba(42, 79, 160, 0.1)",
               width: "100%",
@@ -130,34 +162,40 @@ const SlotRow = ({
           />
         </Box>
 
-        <Stack direction="row" alignItems="center" spacing={0.5}>
-          <Typography
-            sx={{
-              fontWeight: 700,
-              color: MARIAN.inkSoft,
-              minWidth: 18,
-              textAlign: "right",
-            }}
-          >
-            {count}
-          </Typography>
-          {hasBookings ? (
-            <IconButton
-              size="small"
-              onClick={() => setExpanded((prev) => !prev)}
-              sx={{
-                transform: expanded ? "rotate(180deg)" : "none",
-                transition: "transform 0.2s",
-                color: MARIAN.blue,
-              }}
-              aria-label="Show booked people"
-            >
-              <KeyboardArrowDownRoundedIcon />
-            </IconButton>
-          ) : (
-            <Box sx={{ width: 34 }} />
-          )}
-        </Stack>
+        {/* Reserved slots have no bookings to count — drop the "0" entirely so
+            the name sits flush right. */}
+        {!reserved || hasBookings ? (
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            {!reserved ? (
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: MARIAN.inkSoft,
+                  minWidth: 18,
+                  textAlign: "right",
+                }}
+              >
+                {count}
+              </Typography>
+            ) : null}
+            {hasBookings ? (
+              <IconButton
+                size="small"
+                onClick={() => setExpanded((prev) => !prev)}
+                sx={{
+                  transform: expanded ? "rotate(180deg)" : "none",
+                  transition: "transform 0.2s",
+                  color: MARIAN.blue,
+                }}
+                aria-label="Show booked people"
+              >
+                <KeyboardArrowDownRoundedIcon />
+              </IconButton>
+            ) : (
+              <Box sx={{ width: 34 }} />
+            )}
+          </Stack>
+        ) : null}
       </Stack>
 
       <Collapse in={expanded} unmountOnExit>
@@ -186,7 +224,6 @@ const SlotRow = ({
                   }}
                 >
                   • {booking.displayName}
-                  {booking.locked ? " 🔒" : ""}
                 </Typography>
                 {mine ? (
                   <IconButton

@@ -330,7 +330,10 @@ const Counter = () => {
         reachedTarget,
       }).catch(() => {});
 
-      showSnackbar(res?.message, SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      showSnackbar(
+        `${res?.message ? `${res.message} — ` : ""}Have a blessed day 🙏`,
+        SNACK_BAR_SEVERITY_TYPES.SUCCESS
+      );
       reset({ username, inputValue: 1 });
     } catch (error) {
       showSnackbar(
