@@ -60,6 +60,7 @@ const normalizeReservations = (saved) =>
       id: r.id,
       name: r.name || "",
       slotKeys: Array.isArray(r.slotKeys) ? r.slotKeys : [],
+      days: Array.isArray(r.days) ? r.days : [],
     })
   );
 
@@ -151,6 +152,7 @@ const EventForm = ({ event, onBack, onSaved }) => {
             id: r.id,
             name: r.name.trim(),
             slotKeys: r.slotKeys || [],
+            days: r.days || [],
           }))
           .filter((r) => r.name && r.slotKeys.length),
       };

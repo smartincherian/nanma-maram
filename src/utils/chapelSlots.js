@@ -100,15 +100,41 @@ export const isDateBookable = (event, date, now = getToday()) => {
   return target.isSameOrAfter(start, "day") && target.isSameOrBefore(end, "day");
 };
 
+// Weekdays, Sunday-first, matching dayjs's day() integers (0=Sun … 6=Sat).
+// Used by the reservation editor's day picker and the collapsed-card label.
+export const WEEKDAYS = [
+  { value: 0, short: "Sun", long: "Sunday" },
+  { value: 1, short: "Mon", long: "Monday" },
+  { value: 2, short: "Tue", long: "Tuesday" },
+  { value: 3, short: "Wed", long: "Wednesday" },
+  { value: 4, short: "Thu", long: "Thursday" },
+  { value: 5, short: "Fri", long: "Friday" },
+  { value: 6, short: "Sat", long: "Saturday" },
+];
+
+// Human label for a reservation's days: "Every day" when none chosen, else the
+// short names in Sunday-first order regardless of input order ("Tue, Thu").
+export const formatReservedDays = (days) => {
+  if (!Array.isArray(days) || days.length === 0) return "Every day";
+  return WEEKDAYS.filter((d) => days.includes(d.value))
+    .map((d) => d.short)
+    .join(", ");
+};
+
 // Map of every admin-reserved start-time key to the name it is reserved for.
-// Reservations are pure event config that apply to all bookable dates, so no
-// date is needed. If two reservations name the same slotKey, the later entry
-// wins. Entries with a blank name are ignored.
-export const getReservedNames = (event) => {
+// Reservations are pure event config. Each entry may scope itself to specific
+// weekdays via `days` (dayjs ints); an empty/absent list means every day.
+// When `date` is given, only reservations matching that weekday are included;
+// when omitted, the day filter is skipped (every reservation counts). If two
+// reservations name the same slotKey, the later entry wins. Blank names ignored.
+export const getReservedNames = (event, date) => {
+  const weekday = date ? dayjs(date).day() : null;
   const map = {};
   (event?.reservations || []).forEach((reservation) => {
     const name = String(reservation?.name || "").trim();
     if (!name) return;
+    const days = Array.isArray(reservation?.days) ? reservation.days : [];
+    if (weekday !== null && days.length && !days.includes(weekday)) return;
     (reservation?.slotKeys || []).forEach((key) => {
       map[key] = name;
     });

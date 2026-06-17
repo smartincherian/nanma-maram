@@ -169,9 +169,13 @@ const SlotBookingEvent = () => {
     [event]
   );
 
-  // Admin-defined reservations: { slotKey: name }. These slots are frozen for
-  // everyone (no per-date scope — they apply to every day the event runs).
-  const reservedBySlot = useMemo(() => getReservedNames(event), [event]);
+  // Admin-defined reservations: { slotKey: name } for the viewed date. These
+  // slots are frozen for everyone. A reservation may be scoped to specific
+  // weekdays, so this recomputes whenever the visitor changes date.
+  const reservedBySlot = useMemo(
+    () => getReservedNames(event, selectedDate),
+    [event, selectedDate]
+  );
 
   // Group bookings by slot key.
   const bookingsBySlot = useMemo(() => {

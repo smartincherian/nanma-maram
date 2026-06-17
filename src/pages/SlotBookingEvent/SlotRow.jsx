@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Box,
+  Chip,
   Collapse,
   IconButton,
   Stack,
@@ -13,8 +14,9 @@ import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import { MARIAN } from "../../utils/chapelTheme";
 
 // A booked slot wears a single WhatsApp green — the same "taken" signal for
-// every slot. Reserved and leader-locked slots wear the same green (the name
-// chip already marks them as taken); the grey is only the dot's outer ring.
+// every slot. Reserved and leader-locked slots wear the same green and look
+// like a normal booking; the name (with a "World Wide" chip) lives in the
+// dropdown, and the grey is only the dot's outer ring.
 const FILLED_ACCENT = "#25D366"; // WhatsApp green
 const FILLED_TINT = "rgba(37, 211, 102, 0.1)";
 const LOCK_ACCENT = "#9aa3b2";
@@ -41,6 +43,31 @@ const SlotRow = ({
   const hasBookings = count > 0;
   const reserved = Boolean(reservedName);
 
+  // Reserved/locked slots read exactly like a normal booking: a count and a
+  // dropdown. The admin-reserved name has no booking of its own, so it adds one
+  // to the count and appears as a synthetic "World Wide" entry in the dropdown.
+  const displayCount = count + (reserved ? 1 : 0);
+  const expandable = hasBookings || reserved;
+  const dropdownEntries = [
+    ...bookings.map((booking) => ({
+      id: booking.id,
+      displayName: booking.displayName,
+      worldWide: Boolean(booking.locked),
+      booking,
+    })),
+    ...(reserved
+      ? [
+          {
+            id: "__reserved__",
+            displayName: reservedName,
+            worldWide: false,
+            reserved: true,
+            booking: null,
+          },
+        ]
+      : []),
+  ];
+
   // Admin-reserved and leader-locked slots both read as "taken" — the same green
   // fill and chip as a booked slot (Divine Mercy look), no muted-gray state.
   const accent = FILLED_ACCENT;
@@ -56,7 +83,7 @@ const SlotRow = ({
   const frozen = Boolean(reservedName) || (locked && !leaderMode && !isMine);
 
   // Booked-by-me shows a green check; reserved/locked slots show the same green
-  // dot as Divine Mercy — the name chip already says it's taken, so no padlock.
+  // dot as Divine Mercy (non-clickable) — the dropdown reveals who it's for.
   const circleColor = isMine ? "#1f9c74" : "#9fb0cc";
 
   return (
@@ -68,7 +95,7 @@ const SlotRow = ({
         borderRadius: 2,
         background: filled ? tint : "transparent",
         border: "1px solid rgba(42, 79, 160, 0.08)",
-        opacity: frozen ? 0.6 : 1,
+        opacity: frozen ? 0.75 : 1,
       }}
     >
       <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -128,26 +155,6 @@ const SlotRow = ({
             >
               {slot.label} to {slot.endLabel}
             </Typography>
-            {locked ? (
-              <Box
-                component="span"
-                sx={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: accent,
-                  border: `1px solid ${accent}`,
-                  borderRadius: 1,
-                  ml: "auto", // push the name to the right end of the row
-                  maxWidth: "100%",
-                  px: 0.6,
-                  py: 0.1,
-                }}
-              >
-                {reservedName || "Reserved"}
-              </Box>
-            ) : null}
           </Stack>
           <Box
             sx={{
@@ -162,23 +169,21 @@ const SlotRow = ({
           />
         </Box>
 
-        {/* Reserved slots have no bookings to count — drop the "0" entirely so
-            the name sits flush right. */}
-        {!reserved || hasBookings ? (
+        {/* Reserved/locked slots count like a normal booking and expand to
+            reveal the name(s) in the dropdown. */}
+        {filled ? (
           <Stack direction="row" alignItems="center" spacing={0.5}>
-            {!reserved ? (
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  color: MARIAN.inkSoft,
-                  minWidth: 18,
-                  textAlign: "right",
-                }}
-              >
-                {count}
-              </Typography>
-            ) : null}
-            {hasBookings ? (
+            <Typography
+              sx={{
+                fontWeight: 700,
+                color: MARIAN.inkSoft,
+                minWidth: 18,
+                textAlign: "right",
+              }}
+            >
+              {displayCount}
+            </Typography>
+            {expandable ? (
               <IconButton
                 size="small"
                 onClick={() => setExpanded((prev) => !prev)}
@@ -200,11 +205,11 @@ const SlotRow = ({
 
       <Collapse in={expanded} unmountOnExit>
         <Stack spacing={0.25} sx={{ pl: 6, pr: 1, pt: 1, pb: 0.5 }}>
-          {bookings.map((booking) => {
-            const mine = isBookingMine(booking);
+          {dropdownEntries.map((entry) => {
+            const mine = entry.booking ? isBookingMine(entry.booking) : false;
             return (
               <Stack
-                key={booking.id}
+                key={entry.id}
                 direction="row"
                 alignItems="center"
                 spacing={1}
@@ -219,17 +224,35 @@ const SlotRow = ({
                   variant="body2"
                   sx={{
                     flex: 1,
-                    color: mine ? MARIAN.deep : MARIAN.ink,
-                    fontWeight: mine ? 600 : 400,
+                    color: entry.reserved
+                      ? AM_TEXT.trim() // admin-reserved gets a distinct bronze
+                      : mine
+                      ? MARIAN.deep
+                      : MARIAN.ink,
+                    fontWeight: entry.reserved || mine ? 600 : 400,
                   }}
                 >
-                  • {booking.displayName}
+                  • {entry.displayName}
                 </Typography>
+                {entry.worldWide ? (
+                  <Chip
+                    label="World Wide"
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                      bgcolor: FILLED_ACCENT,
+                      color: "#fff",
+                      "& .MuiChip-label": { px: 0.75 },
+                    }}
+                  />
+                ) : null}
                 {mine ? (
                   <IconButton
                     size="small"
                     color="error"
-                    onClick={() => onDeleteBooking(booking.id)}
+                    onClick={() => onDeleteBooking(entry.booking.id)}
                     aria-label="Delete my booking"
                   >
                     <DeleteOutlineRoundedIcon fontSize="small" />

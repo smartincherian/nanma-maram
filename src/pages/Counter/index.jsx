@@ -171,7 +171,6 @@ const Counter = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
-  const [audioAutoplayFailed, setAudioAutoplayFailed] = useState(false);
   const [completionAudioPlaying, setCompletionAudioPlaying] = useState(false);
   const { showSnackbar } = useContext(SnackbarContext);
   const audioRef = useRef(null);
@@ -314,7 +313,6 @@ const Counter = () => {
 
       if (reachedTarget) {
         setShowCompletionOverlay(true);
-        setAudioAutoplayFailed(false);
         setCompletionAudioPlaying(false);
         hasShownCompletionOverlayRef.current = true;
         hasAttemptedCompletionAudioRef.current = false;
@@ -517,7 +515,6 @@ const Counter = () => {
     const audioElement = audioRef.current;
 
     if (!audioElement || !completionAudioSrc) {
-      setAudioAutoplayFailed(true);
       return;
     }
 
@@ -525,10 +522,8 @@ const Counter = () => {
       audioElement.currentTime = 0;
       await audioElement.play();
       setCompletionAudioPlaying(true);
-      setAudioAutoplayFailed(false);
     } catch (error) {
       setCompletionAudioPlaying(false);
-      setAudioAutoplayFailed(true);
     }
   }, [completionAudioSrc]);
 
@@ -536,7 +531,6 @@ const Counter = () => {
     hasShownCompletionOverlayRef.current = false;
     hasAttemptedCompletionAudioRef.current = false;
     setShowCompletionOverlay(false);
-    setAudioAutoplayFailed(false);
     setCompletionAudioPlaying(false);
   }, [id]);
 

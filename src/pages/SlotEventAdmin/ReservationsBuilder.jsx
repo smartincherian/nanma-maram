@@ -2,8 +2,15 @@ import React, { useMemo, useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   Chip,
+  FormControl,
   IconButton,
+  InputLabel,
+  ListItemText,
+  MenuItem,
+  OutlinedInput,
+  Select,
   Stack,
   TextField,
   Tooltip,
@@ -14,7 +21,11 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
-import { generateSlots } from "../../utils/chapelSlots";
+import {
+  WEEKDAYS,
+  formatReservedDays,
+  generateSlots,
+} from "../../utils/chapelSlots";
 import { MARIAN } from "../../utils/chapelTheme";
 
 export const makeReservation = (overrides = {}) => ({
@@ -24,16 +35,17 @@ export const makeReservation = (overrides = {}) => ({
       : `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   name: "",
   slotKeys: [],
+  days: [],
   ...overrides,
 });
 
 // Admin-defined locks. Each entry reserves one or more start times for a named
-// person; the end time is derived from the event's slot length.
+// person; the end time is derived from the event's slot length. An entry can be
+// scoped to specific weekdays — leave the day picker empty to lock every day.
 //
-// UX: the full slot picker is only shown while an entry is being built. New
-// reservations open in build mode; saved ones load collapsed to just the chosen
-// slots. Editing a collapsed entry reopens the picker (all times) for it.
-// Reservations apply to every bookable date of the event.
+// UX: the full pickers are only shown while an entry is being built. New
+// reservations open in build mode; saved ones load collapsed to a summary.
+// Editing a collapsed entry reopens the pickers for it.
 const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
   const slots = useMemo(() => generateSlots(slotMinutes), [slotMinutes]);
   const slotByKey = useMemo(() => {
@@ -44,7 +56,7 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
     return map;
   }, [slots]);
 
-  // Ids whose slot picker is open. Kept as local UI state — it never persists.
+  // Ids whose pickers are open. Kept as local UI state — it never persists.
   const [editingIds, setEditingIds] = useState(() => new Set());
 
   const isEditing = (id) => editingIds.has(id);
@@ -70,21 +82,17 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
     onChange([...reservations, reservation]);
   };
 
-  const toggleSlot = (reservation, key) => {
-    const has = reservation.slotKeys.includes(key);
-    update(reservation.id, {
-      slotKeys: has
-        ? reservation.slotKeys.filter((k) => k !== key)
-        : [...reservation.slotKeys, key],
-    });
-  };
-
   // Selected slots resolved to objects and ordered by start time, for display.
   const selectedSlots = (reservation) =>
     reservation.slotKeys
       .map((key) => slotByKey[key])
       .filter(Boolean)
       .sort((a, b) => a.key.localeCompare(b.key));
+
+  const slotLabel = (key) => {
+    const slot = slotByKey[key];
+    return slot ? `${slot.label} – ${slot.endLabel}` : key;
+  };
 
   const cardSx = {
     border: `1px solid ${MARIAN.border}`,
@@ -100,14 +108,15 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
       </Typography>
       <Typography variant="body2" sx={{ color: MARIAN.inkSoft, mt: -0.5 }}>
         Pre-lock slots for a named person. They show as “Reserved” to everyone
-        and can’t be booked. Reservations apply to every day this event runs.
+        and can’t be booked. Pick which days they apply to, or leave days empty
+        to lock every day this event runs.
       </Typography>
 
       {reservations.map((reservation) => {
         const chosen = selectedSlots(reservation);
         const canSave = reservation.name.trim() && chosen.length > 0;
 
-        // ── Collapsed view: name + chosen slots, delete-to-change only ──
+        // ── Collapsed view: name + days + chosen slots, edit/delete only ──
         if (!isEditing(reservation.id)) {
           return (
             <Box key={reservation.id} sx={cardSx}>
@@ -129,6 +138,12 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
                       {reservation.name.trim() || "Unnamed reservation"}
                     </Typography>
                   </Stack>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: MARIAN.inkSoft, display: "block", mt: 0.5 }}
+                  >
+                    {formatReservedDays(reservation.days)}
+                  </Typography>
                   <Box
                     sx={{
                       display: "flex",
@@ -185,7 +200,7 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
           );
         }
 
-        // ── Build view: name field + slot picker grid ──
+        // ── Build view: name + days dropdown + times dropdown ──
         return (
           <Box key={reservation.id} sx={cardSx}>
             <Stack direction="row" spacing={1.5} alignItems="center">
@@ -210,36 +225,91 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
               </Tooltip>
             </Stack>
 
-            <Typography
-              variant="caption"
-              sx={{ color: MARIAN.inkSoft, display: "block", mt: 1.25, mb: 0.5 }}
-            >
-              Select start times — end time is calculated from the slot length.
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-              {slots.map((slot) => {
-                const selected = reservation.slotKeys.includes(slot.key);
-                return (
-                  <Chip
-                    key={slot.key}
-                    label={`${slot.label} – ${slot.endLabel}`}
-                    size="small"
-                    onClick={() => toggleSlot(reservation, slot.key)}
-                    variant={selected ? "filled" : "outlined"}
-                    sx={
-                      selected
-                        ? {
-                            background: MARIAN.blue,
-                            color: MARIAN.white,
-                            fontWeight: 600,
-                            "&:hover": { background: MARIAN.deep },
-                          }
-                        : { color: MARIAN.ink, borderColor: MARIAN.border }
-                    }
-                  />
-                );
-              })}
-            </Box>
+            <FormControl size="small" fullWidth sx={{ mt: 1.5 }}>
+              <InputLabel id={`days-${reservation.id}`} shrink>
+                Days
+              </InputLabel>
+              <Select
+                labelId={`days-${reservation.id}`}
+                multiple
+                value={reservation.days}
+                onChange={(e) =>
+                  update(reservation.id, {
+                    days:
+                      typeof e.target.value === "string"
+                        ? e.target.value.split(",").map(Number)
+                        : e.target.value,
+                  })
+                }
+                input={<OutlinedInput notched label="Days" />}
+                displayEmpty
+                renderValue={(selected) =>
+                  selected.length === 0 ? (
+                    <Typography
+                      component="span"
+                      sx={{ color: MARIAN.inkSoft }}
+                    >
+                      Every day
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {WEEKDAYS.filter((d) => selected.includes(d.value)).map(
+                        (d) => (
+                          <Chip key={d.value} label={d.short} size="small" />
+                        )
+                      )}
+                    </Box>
+                  )
+                }
+              >
+                {WEEKDAYS.map((d) => (
+                  <MenuItem key={d.value} value={d.value}>
+                    <Checkbox checked={reservation.days.includes(d.value)} />
+                    <ListItemText primary={d.long} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" fullWidth sx={{ mt: 1.5 }}>
+              <InputLabel id={`times-${reservation.id}`}>
+                Start times
+              </InputLabel>
+              <Select
+                labelId={`times-${reservation.id}`}
+                multiple
+                value={reservation.slotKeys}
+                onChange={(e) =>
+                  update(reservation.id, {
+                    slotKeys:
+                      typeof e.target.value === "string"
+                        ? e.target.value.split(",")
+                        : e.target.value,
+                  })
+                }
+                input={<OutlinedInput label="Start times" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {[...selected]
+                      .sort((a, b) => a.localeCompare(b))
+                      .map((key) => (
+                        <Chip key={key} label={slotLabel(key)} size="small" />
+                      ))}
+                  </Box>
+                )}
+              >
+                {slots.map((slot) => (
+                  <MenuItem key={slot.key} value={slot.key}>
+                    <Checkbox
+                      checked={reservation.slotKeys.includes(slot.key)}
+                    />
+                    <ListItemText
+                      primary={`${slot.label} – ${slot.endLabel}`}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             <Stack
               direction="row"
@@ -250,7 +320,7 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
             >
               <Typography variant="caption" sx={{ color: MARIAN.inkSoft }}>
                 {chosen.length
-                  ? `${chosen.length} slot${chosen.length > 1 ? "s" : ""} selected`
+                  ? `${chosen.length} slot${chosen.length > 1 ? "s" : ""} · ${formatReservedDays(reservation.days)}`
                   : "No slots selected yet"}
               </Typography>
               <Button
