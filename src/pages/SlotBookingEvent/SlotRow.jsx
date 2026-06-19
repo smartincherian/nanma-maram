@@ -37,6 +37,7 @@ const SlotRow = ({
   isBookingMine,
   onCirclePress,
   onDeleteBooking,
+  readOnly = false,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const count = bookings.length;
@@ -79,8 +80,10 @@ const SlotRow = ({
   const labelColor = isAM ? AM_TEXT : PM_TEXT;
 
   // An admin-reserved slot is frozen for everyone (no override). A leader-locked
-  // booking is frozen for everyone but the leader.
-  const frozen = Boolean(reservedName) || (locked && !leaderMode && !isMine);
+  // booking is frozen for everyone but the leader. Elapsed slots (read-only) are
+  // past — no booking or removal, but still expandable to see who prayed.
+  const frozen =
+    readOnly || Boolean(reservedName) || (locked && !leaderMode && !isMine);
 
   // Booked-by-me shows a green check; reserved/locked slots show the same green
   // dot as Divine Mercy (non-clickable) — the dropdown reveals who it's for.
@@ -248,7 +251,7 @@ const SlotRow = ({
                     }}
                   />
                 ) : null}
-                {mine ? (
+                {mine && !readOnly ? (
                   <IconButton
                     size="small"
                     color="error"
