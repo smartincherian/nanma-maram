@@ -23,7 +23,11 @@ import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
-import { SLOT_LENGTH_OPTIONS, formatSlotLength } from "../../utils/chapelSlots";
+import {
+  SLOT_LENGTH_OPTIONS,
+  formatSlotLength,
+  isDateReservationComplete,
+} from "../../utils/chapelSlots";
 import { MARIAN, MARIAN_BUTTON_BG } from "../../utils/chapelTheme";
 import { createEvent, updateEvent } from "../../firebase/chapel/events";
 import FieldsBuilder, { makeField, makeNameField } from "./FieldsBuilder";
@@ -145,18 +149,10 @@ const EventForm = ({ event, onBack, onSaved }) => {
         r.endDate ||
         r.startSlotKey ||
         r.endSlotKey;
-      const complete =
-        r.reason.trim() &&
-        r.startDate &&
-        r.endDate &&
-        r.startDate <= r.endDate &&
-        r.startSlotKey &&
-        r.endSlotKey &&
-        r.startSlotKey <= r.endSlotKey;
-      return filled && !complete;
+      return filled && !isDateReservationComplete(r);
     });
     if (partialDateRes)
-      return "Finish each date-range reservation: add a reason, valid dates, and a start/end time.";
+      return "Finish each date-range reservation: add a reason, then a start date & time before the end date & time.";
     return "";
   };
 
@@ -205,16 +201,7 @@ const EventForm = ({ event, onBack, onSaved }) => {
             startSlotKey: r.startSlotKey,
             endSlotKey: r.endSlotKey,
           }))
-          .filter(
-            (r) =>
-              r.reason &&
-              r.startDate &&
-              r.endDate &&
-              r.startDate <= r.endDate &&
-              r.startSlotKey &&
-              r.endSlotKey &&
-              r.startSlotKey <= r.endSlotKey
-          ),
+          .filter(isDateReservationComplete),
       };
 
       if (isEdit) {
