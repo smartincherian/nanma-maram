@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import TouchAppRoundedIcon from "@mui/icons-material/TouchAppRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   SnackbarContext,
@@ -30,6 +31,7 @@ import {
   getReservedNames,
   isDateBookable,
   resolveDateParam,
+  splitSlotsByElapsed,
 } from "../../utils/chapelSlots";
 import { subscribeEvent } from "../../firebase/chapel/events";
 import {
@@ -60,6 +62,10 @@ import ChapelFooter from "../../components/ChapelFooter";
 // and wipe whatever the leader is typing.
 const EMPTY_VALUES = {};
 
+// Stable no-op for read-only (elapsed) slot rows, whose booking/delete handlers
+// are never invoked — keeps the prop identity constant across renders.
+const NOOP = () => {};
+
 const ZOOM_URL =
   "https://buddytutor.zoom.us/j/81689299863?pwd=nYwo5nDTEWgN4eso5jvFf4jRP7rcVS#success";
 
@@ -83,6 +89,7 @@ const SlotBookingEvent = () => {
   const [myBookingIds, setMyBookingIds] = useState(() => getMyBookingIds());
   const [drawer, setDrawer] = useState(null); // null | { mode: "book"|"profile", slot?, forOthers? }
   const [bookFor, setBookFor] = useState("self"); // "self" | "others"
+  const [showElapsed, setShowElapsed] = useState(false);
 
   // Flatten the header's rounded top corners once it sticks to the very top of
   // the viewport while scrolling; keep them rounded when at rest.
@@ -167,6 +174,16 @@ const SlotBookingEvent = () => {
   const slots = useMemo(
     () => (event ? generateSlots(event.slotMinutes) : []),
     [event]
+  );
+
+  // For "today", slots from an earlier clock hour are split off so the list
+  // leads with what's still bookable; they reveal inline under a toggle. Any
+  // other date keeps every slot upcoming (elapsed is empty). Computed once per
+  // render — no timer — so it refreshes as the page re-renders on booking
+  // snapshots and date changes.
+  const { upcoming: upcomingSlots, elapsed: elapsedSlots } = useMemo(
+    () => splitSlotsByElapsed(slots, selectedDate),
+    [slots, selectedDate]
   );
 
   // Admin-defined reservations: { slotKey: name } for the viewed date. These
@@ -366,6 +383,29 @@ const SlotBookingEvent = () => {
         },
       };
 
+  // One renderer for both elapsed (read-only) and upcoming slot rows so the two
+  // lists stay in sync. Read-only rows can't book or remove — their handlers are
+  // the stable NOOP.
+  const renderSlotRow = (slot, readOnly = false) => {
+    const slotBookings = bookingsBySlot[slot.key] || [];
+    const reservedName = reservedBySlot[slot.key];
+    return (
+      <SlotRow
+        key={slot.key}
+        slot={slot}
+        bookings={slotBookings}
+        isMine={slotBookings.some(isBookingMine)}
+        locked={Boolean(reservedName) || slotBookings.some((b) => b.locked)}
+        reservedName={reservedName}
+        leaderMode={leaderMode}
+        isBookingMine={isBookingMine}
+        onCirclePress={readOnly ? NOOP : handleCirclePress}
+        onDeleteBooking={readOnly ? NOOP : removeMyBooking}
+        readOnly={readOnly}
+      />
+    );
+  };
+
   return (
     <Box sx={{ minHeight: "100vh", background: MARIAN_PAGE_BG }}>
     <Container
@@ -518,26 +558,33 @@ const SlotBookingEvent = () => {
           </Box>
         ) : (
           <Box sx={{ px: { xs: 1.5, sm: 2.5 }, py: 1 }}>
-            {slots.map((slot) => {
-              const slotBookings = bookingsBySlot[slot.key] || [];
-              const reservedName = reservedBySlot[slot.key];
-              return (
-                <SlotRow
-                  key={slot.key}
-                  slot={slot}
-                  bookings={slotBookings}
-                  isMine={slotBookings.some(isBookingMine)}
-                  locked={
-                    Boolean(reservedName) || slotBookings.some((b) => b.locked)
-                  }
-                  reservedName={reservedName}
-                  leaderMode={leaderMode}
-                  isBookingMine={isBookingMine}
-                  onCirclePress={handleCirclePress}
-                  onDeleteBooking={removeMyBooking}
-                />
-              );
-            })}
+            {elapsedSlots.length && !showElapsed ? (
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 0.5 }}>
+                <Button
+                  size="small"
+                  disableRipple
+                  startIcon={<HistoryRoundedIcon sx={{ fontSize: 16 }} />}
+                  onClick={() => setShowElapsed(true)}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 500,
+                    fontSize: "0.75rem",
+                    color: MARIAN.inkSoft,
+                    px: 1,
+                    py: 0.25,
+                    "&:hover": { background: "transparent", color: MARIAN.blue },
+                  }}
+                >
+                  View earlier slots
+                </Button>
+              </Box>
+            ) : null}
+            {/* Elapsed slots (today only) render inline above the rest, read-only
+                — past times can't be booked but still show who prayed. */}
+            {showElapsed
+              ? elapsedSlots.map((slot) => renderSlotRow(slot, true))
+              : null}
+            {upcomingSlots.map((slot) => renderSlotRow(slot))}
           </Box>
         )}
 

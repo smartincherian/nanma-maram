@@ -1,9 +1,11 @@
+import dayjs from "dayjs";
 import {
   formatDateKey,
   formatReservedDays,
   getReservedNames,
   getToday,
   resolveDateParam,
+  splitSlotsByElapsed,
 } from "./chapelSlots";
 
 describe("resolveDateParam", () => {
@@ -139,6 +141,56 @@ describe("getReservedNames", () => {
         "09:00": "Daily",
       });
     });
+  });
+});
+
+describe("splitSlotsByElapsed", () => {
+  const slots = [
+    { key: "14:00" },
+    { key: "14:30" },
+    { key: "15:00" },
+    { key: "15:30" },
+    { key: "16:00" },
+  ];
+
+  it("keeps the whole current hour upcoming (3:48 → 3 PM onwards)", () => {
+    const date = dayjs("2026-06-19");
+    const now = dayjs("2026-06-19 15:48");
+    const { upcoming, elapsed } = splitSlotsByElapsed(slots, date, now);
+    expect(elapsed.map((s) => s.key)).toEqual(["14:00", "14:30"]);
+    expect(upcoming.map((s) => s.key)).toEqual(["15:00", "15:30", "16:00"]);
+  });
+
+  it("keeps the on-the-hour slot upcoming exactly at the top of the hour", () => {
+    const date = dayjs("2026-06-19");
+    const now = dayjs("2026-06-19 15:00");
+    const { upcoming, elapsed } = splitSlotsByElapsed(slots, date, now);
+    expect(elapsed.map((s) => s.key)).toEqual(["14:00", "14:30"]);
+    expect(upcoming.map((s) => s.key)).toEqual(["15:00", "15:30", "16:00"]);
+  });
+
+  it("elapses a whole hour only once the next hour begins", () => {
+    const date = dayjs("2026-06-19");
+    const now = dayjs("2026-06-19 16:05");
+    const { upcoming, elapsed } = splitSlotsByElapsed(slots, date, now);
+    expect(elapsed.map((s) => s.key)).toEqual(["14:00", "14:30", "15:00", "15:30"]);
+    expect(upcoming.map((s) => s.key)).toEqual(["16:00"]);
+  });
+
+  it("treats every slot as upcoming for a future date", () => {
+    const date = dayjs("2026-06-20");
+    const now = dayjs("2026-06-19 15:48");
+    const { upcoming, elapsed } = splitSlotsByElapsed(slots, date, now);
+    expect(elapsed).toEqual([]);
+    expect(upcoming).toEqual(slots);
+  });
+
+  it("treats every slot as upcoming for a past date (only today elapses)", () => {
+    const date = dayjs("2026-06-18");
+    const now = dayjs("2026-06-19 15:48");
+    const { upcoming, elapsed } = splitSlotsByElapsed(slots, date, now);
+    expect(elapsed).toEqual([]);
+    expect(upcoming).toEqual(slots);
   });
 });
 

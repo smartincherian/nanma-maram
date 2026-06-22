@@ -32,6 +32,36 @@ export const IST_TIMEZONE = "Asia/Kolkata";
 
 export const getToday = () => dayjs().tz(IST_TIMEZONE).startOf("day");
 
+// Current instant expressed in IST. The chapel runs on IST, so "now" for the
+// elapsed-slot check must be IST regardless of the visitor's device timezone.
+export const getIstNow = () => dayjs().tz(IST_TIMEZONE);
+
+const slotKeyToMinutes = (key) => {
+  const [h, m] = key.split(":").map(Number);
+  return h * 60 + m;
+};
+
+// Split a day's slots into { upcoming, elapsed } relative to the current IST
+// time, on an hourly boundary. Only "today" has elapsed slots — for any other
+// date every slot stays upcoming. The cutoff is the start of the current clock
+// hour: a slot is elapsed only if it starts in an earlier hour. So at 3:48 PM
+// every slot from 3:00 PM onward stays in "upcoming" (the whole current hour),
+// and only 2:30 PM and earlier are elapsed.
+export const splitSlotsByElapsed = (slots, date, now = getIstNow()) => {
+  if (!dayjs(date).isSame(now, "day")) {
+    return { upcoming: slots, elapsed: [] };
+  }
+  const hourFloorMinutes = now.hour() * 60;
+  const upcoming = [];
+  const elapsed = [];
+  slots.forEach((slot) => {
+    (slotKeyToMinutes(slot.key) < hourFloorMinutes ? elapsed : upcoming).push(
+      slot
+    );
+  });
+  return { upcoming, elapsed };
+};
+
 // Relative date keywords usable in the URL date segment, as day offsets from
 // the IST "today".
 export const RELATIVE_DATE_KEYWORDS = { today: 0, tomorrow: 1 };
