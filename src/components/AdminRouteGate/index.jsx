@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Box,
@@ -7,42 +7,34 @@ import {
   CardContent,
   Container,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
-import { useLocation } from "react-router-dom";
-
-export const LEADER_CODE = "1305";
-export const LEADER_ACCESS_STORAGE_KEY = "leaderCodeAccess";
-
-export const hasLeaderAccess = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return localStorage.getItem(LEADER_ACCESS_STORAGE_KEY) === LEADER_CODE;
-};
+import GoogleIcon from "@mui/icons-material/Google";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import { signInWithGoogle, signOutUser } from "../../firebase/auth";
+import { useAuth } from "../AuthProvider";
 
 const AdminRouteGate = () => {
-  const location = useLocation();
-  const [leaderCode, setLeaderCode] = useState("");
+  const { user, isAllowed } = useAuth();
+  const isSignedInButDenied = Boolean(user) && !isAllowed;
+  const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState("");
 
-  const targetPath = useMemo(
-    () => `${location.pathname}${location.search}${location.hash}`,
-    [location.pathname, location.search, location.hash]
-  );
-
-  const handleLeaderAccess = () => {
-    if (leaderCode.trim() !== LEADER_CODE) {
-      setError("Leader code is invalid");
-      return;
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setSigningIn(true);
+    try {
+      await signInWithGoogle();
+      // On success, AuthProvider's onAuthStateChanged fires and
+      // ProtectedRoute re-evaluates — no navigation needed here.
+    } catch (err) {
+      // The user simply closing the popup is not an error worth showing.
+      if (err?.code !== "auth/popup-closed-by-user") {
+        setError("Could not sign in. Please try again.");
+      }
+      setSigningIn(false);
     }
-
-    localStorage.setItem(LEADER_ACCESS_STORAGE_KEY, LEADER_CODE);
-    window.location.replace(targetPath);
   };
 
   return (
@@ -185,44 +177,44 @@ const AdminRouteGate = () => {
                     fontWeight: 800,
                     color: "#6f3a00",
                     fontSize: { xs: "1.05rem", sm: "1.15rem" },
+                    mb: 1.5,
                   }}
                 >
                   For Admin
                 </Typography>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
-                  <TextField
-                    value={leaderCode}
-                    onChange={(event) => {
-                      setLeaderCode(event.target.value);
-                      if (error) {
-                        setError("");
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        handleLeaderAccess();
-                      }
-                    }}
-                    fullWidth
-                    label="Leader Code"
-                    type="password"
-                    size="medium"
-                    error={Boolean(error)}
-                    helperText={error || " "}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 2.5,
-                        backgroundColor: "#fff",
-                      },
-                    }}
-                  />
 
+                {isSignedInButDenied ? (
+                  <Stack spacing={1.5}>
+                    <Typography sx={{ color: "#6f3a00", lineHeight: 1.6 }}>
+                      Signed in as <strong>{user.email}</strong>. This account
+                      doesn&apos;t have admin access. If you need access, ask an
+                      existing admin to add you.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={() => signOutUser()}
+                      startIcon={<LogoutRoundedIcon />}
+                      sx={{
+                        height: { xs: 52, sm: 56 },
+                        borderRadius: 2.5,
+                        textTransform: "none",
+                        fontWeight: 800,
+                        borderColor: "rgba(147, 81, 0, 0.5)",
+                        color: "#935100",
+                      }}
+                    >
+                      Sign out
+                    </Button>
+                  </Stack>
+                ) : (
                   <Button
                     variant="contained"
-                    onClick={handleLeaderAccess}
-                    startIcon={<LockOpenRoundedIcon />}
+                    fullWidth
+                    onClick={handleGoogleSignIn}
+                    disabled={signingIn}
+                    startIcon={<GoogleIcon />}
                     sx={{
-                      minWidth: { xs: "100%", sm: 160 },
                       height: { xs: 52, sm: 56 },
                       borderRadius: 2.5,
                       textTransform: "none",
@@ -232,21 +224,21 @@ const AdminRouteGate = () => {
                       boxShadow: "0 14px 28px rgba(147, 81, 0, 0.22)",
                     }}
                   >
-                    Enter
+                    {signingIn ? "Signing in…" : "Sign in with Google"}
                   </Button>
-                </Stack>
+                )}
               </Box>
 
-              {targetPath !== "/" ? (
+              {error ? (
                 <Alert
-                  severity="info"
+                  severity="error"
+                  onClose={() => setError("")}
                   sx={{
                     borderRadius: 3,
                     alignItems: "center",
-                    backgroundColor: "rgba(229, 242, 253, 0.72)",
                   }}
                 >
-                  Requested page: {targetPath}
+                  {error}
                 </Alert>
               ) : null}
             </Stack>

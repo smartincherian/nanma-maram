@@ -1,12 +1,9 @@
-import {
-  BrowserRouter,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import React from "react";
 import "./App.css";
 import { SnackbarProvider } from "./components/Snackbar";
+import { AuthProvider } from "./components/AuthProvider";
+import ProtectedRoute from "./components/ProtectedRoute";
 import PrayerForm from "./pages/PrayerForm";
 import Home from "./pages/Home";
 import IntentionsList from "./pages/IntentionsList";
@@ -19,32 +16,13 @@ import PrayerBank from "./pages/PrayerBank";
 import Register from "./pages/PrayerBank/Register";
 import SlotEventAdmin from "./pages/SlotEventAdmin";
 import SlotBookingEvent from "./pages/SlotBookingEvent";
-import AdminRouteGate, {
-  hasLeaderAccess,
-} from "./components/AdminRouteGate";
-
-function ProtectedRoute({ children }) {
-  const location = useLocation();
-
-  const isPrayerBankPublicRoute =
-    location.pathname === "/register-prayer-bank" ||
-    location.pathname.startsWith("/prayer-bank/");
-
-  if (isPrayerBankPublicRoute) {
-    return children;
-  }
-
-  if (hasLeaderAccess()) {
-    return children;
-  }
-
-  return <AdminRouteGate />;
-}
+import Admins from "./pages/Admins";
 
 function App() {
   return (
     <SnackbarProvider>
-      <BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
         <Routes>
           <Route
             path="/"
@@ -79,6 +57,14 @@ function App() {
             }
           />
           <Route path="/counter/:id" element={<Counter />} />
+          <Route
+            path="/admins"
+            element={
+              <ProtectedRoute>
+                <Admins />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/intention-mother"
             element={
@@ -155,8 +141,9 @@ function App() {
               />
             </React.Fragment>
           ))}
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </SnackbarProvider>
   );
 }
