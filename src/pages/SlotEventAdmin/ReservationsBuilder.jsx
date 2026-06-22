@@ -360,4 +360,6 @@ const ReservationsBuilder = ({ reservations, slotMinutes, onChange }) => {
   );
 };
 
-export default ReservationsBuilder;
+// Memoised so editing another section of the event form (fields, date-range
+// reservations) doesn't re-render this list — props are stable arrays + setters.
+export default React.memo(ReservationsBuilder);

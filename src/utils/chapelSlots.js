@@ -169,6 +169,27 @@ export const getReservedNames = (event, date) => {
       map[key] = name;
     });
   });
+  // Date-range locks reserve a contiguous block of slots across a specific date
+  // span, regardless of weekday. They apply only when a concrete date is known,
+  // and are layered last so a date reservation wins any slot it shares with a
+  // weekday reservation. Each entry locks every slot whose start key falls in
+  // [startSlotKey, endSlotKey] (inclusive) on each date in [startDate, endDate]
+  // (inclusive). Keys are zero-padded "HH:mm", so string comparison orders them.
+  if (date) {
+    const dateKey = formatDateKey(date);
+    const slotKeys = generateSlots(event?.slotMinutes).map((slot) => slot.key);
+    (event?.dateReservations || []).forEach((reservation) => {
+      const reason = String(reservation?.reason || "").trim();
+      const { startDate, endDate, startSlotKey, endSlotKey } = reservation || {};
+      if (!reason || !startDate || !endDate || !startSlotKey || !endSlotKey) {
+        return;
+      }
+      if (dateKey < startDate || dateKey > endDate) return;
+      slotKeys.forEach((key) => {
+        if (key >= startSlotKey && key <= endSlotKey) map[key] = reason;
+      });
+    });
+  }
   return map;
 };
 

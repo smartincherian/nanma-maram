@@ -142,6 +142,94 @@ describe("getReservedNames", () => {
       });
     });
   });
+
+  describe("date-range scope", () => {
+    // 30-min slots. 06:00 → 07:00 inclusive covers 06:00, 06:30, 07:00.
+    const baseEvent = {
+      slotMinutes: 30,
+      dateReservations: [
+        {
+          id: "d1",
+          reason: "Maintenance",
+          startDate: "2026-06-16",
+          endDate: "2026-06-18",
+          startSlotKey: "06:00",
+          endSlotKey: "07:00",
+        },
+      ],
+    };
+
+    it("locks every slot in the block on a date inside the range", () => {
+      expect(getReservedNames(baseEvent, "2026-06-17")).toEqual({
+        "06:00": "Maintenance",
+        "06:30": "Maintenance",
+        "07:00": "Maintenance",
+      });
+    });
+
+    it("locks the slots on the inclusive start and end dates", () => {
+      expect(getReservedNames(baseEvent, "2026-06-16")["06:30"]).toBe(
+        "Maintenance"
+      );
+      expect(getReservedNames(baseEvent, "2026-06-18")["06:30"]).toBe(
+        "Maintenance"
+      );
+    });
+
+    it("locks nothing on a date outside the range", () => {
+      expect(getReservedNames(baseEvent, "2026-06-15")).toEqual({});
+      expect(getReservedNames(baseEvent, "2026-06-19")).toEqual({});
+    });
+
+    it("skips date reservations when no date is given", () => {
+      expect(getReservedNames(baseEvent)).toEqual({});
+    });
+
+    it("ignores entries with a blank reason or incomplete bounds", () => {
+      const event = {
+        slotMinutes: 30,
+        dateReservations: [
+          {
+            id: "d1",
+            reason: "   ",
+            startDate: "2026-06-16",
+            endDate: "2026-06-18",
+            startSlotKey: "06:00",
+            endSlotKey: "07:00",
+          },
+          {
+            id: "d2",
+            reason: "No end date",
+            startDate: "2026-06-16",
+            endDate: "",
+            startSlotKey: "06:00",
+            endSlotKey: "07:00",
+          },
+        ],
+      };
+      expect(getReservedNames(event, "2026-06-17")).toEqual({});
+    });
+
+    it("lets a date reservation win over a weekday reservation on the same slot", () => {
+      const event = {
+        slotMinutes: 30,
+        reservations: [
+          { id: "r1", name: "Weekly", slotKeys: ["06:00"], days: [] },
+        ],
+        dateReservations: [
+          {
+            id: "d1",
+            reason: "Special",
+            startDate: "2026-06-16",
+            endDate: "2026-06-18",
+            startSlotKey: "06:00",
+            endSlotKey: "06:00",
+          },
+        ],
+      };
+      expect(getReservedNames(event, "2026-06-17")["06:00"]).toBe("Special");
+    });
+  });
 });
 
 describe("splitSlotsByElapsed", () => {

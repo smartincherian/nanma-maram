@@ -1,10 +1,20 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Box,
   Button,
   Chip,
   CircularProgress,
   Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   IconButton,
   Stack,
@@ -17,7 +27,12 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
-import { fetchBookings } from "../../firebase/chapel/bookings";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import { deleteBooking, fetchBookings } from "../../firebase/chapel/bookings";
+import {
+  SnackbarContext,
+  SNACK_BAR_SEVERITY_TYPES,
+} from "../../components/Snackbar";
 import {
   formatDateKey,
   formatDateLabel,
@@ -56,9 +71,13 @@ const downloadFile = (filename, text, mime) => {
 
 const BookingsSheet = ({ open, event, onClose }) => {
   const fullScreen = useMediaQuery("(max-width:599px)");
+  const { showSnackbar } = useContext(SnackbarContext);
   const [dateKey, setDateKey] = useState("");
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  // The booking pending a delete confirmation: { booking, slotLabel } | null.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fields = useMemo(() => event?.fields || [], [event]);
   const displayField = useMemo(
@@ -94,6 +113,28 @@ const BookingsSheet = ({ open, event, onClose }) => {
   useEffect(() => {
     if (open) load();
   }, [open, load]);
+
+  // Permanently remove a booking. The sheet reads bookings once (no live
+  // subscription), so drop the deleted row from local state rather than refetch.
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { booking } = pendingDelete;
+    setDeletingId(booking.id);
+    try {
+      await deleteBooking(booking.id);
+      setBookings((prev) => prev.filter((b) => b.id !== booking.id));
+      setPendingDelete(null);
+      showSnackbar("Booking removed.", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+    } catch (err) {
+      console.error("Error deleteBooking:", err);
+      showSnackbar(
+        "Could not remove the booking. Please try again.",
+        SNACK_BAR_SEVERITY_TYPES.ERROR
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const fieldValue = useCallback(
     (booking, field) => {
@@ -334,6 +375,22 @@ const BookingsSheet = ({ open, event, onClose }) => {
                         >
                           {b.id}
                         </Typography>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={deletingId === b.id}
+                          onClick={() =>
+                            setPendingDelete({
+                              booking: b,
+                              name: fieldValue(b, displayField) || "Guest",
+                              slotLabel: g.label,
+                            })
+                          }
+                          aria-label="Delete booking"
+                          sx={{ flexShrink: 0 }}
+                        >
+                          <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
                       </Stack>
                       {otherFields.map((f) => (
                         <Typography
@@ -369,6 +426,46 @@ const BookingsSheet = ({ open, event, onClose }) => {
           Done
         </Button>
       </Box>
+
+      {/* Confirm before permanently removing a booking */}
+      <Dialog
+        open={Boolean(pendingDelete)}
+        onClose={() => {
+          // Ignore backdrop/escape dismissal while a delete is in flight.
+          if (!deletingId) setPendingDelete(null);
+        }}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: MARIAN.deep }}>
+          Delete this booking?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingDelete
+              ? `Remove ${pendingDelete.name}'s booking for ${pendingDelete.slotLabel}? This can't be undone.`
+              : ""}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setPendingDelete(null)}
+            disabled={Boolean(deletingId)}
+            sx={{ textTransform: "none", fontWeight: 700, color: MARIAN.inkSoft }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            disabled={Boolean(deletingId)}
+            variant="contained"
+            color="error"
+            startIcon={<DeleteOutlineRoundedIcon />}
+            sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+          >
+            {deletingId ? "Deleting…" : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
