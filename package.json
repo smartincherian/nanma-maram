@@ -29,7 +29,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "release": "npm run build && firebase deploy --only hosting"
+    "release": "npm run build && firebase deploy --only hosting",
+    "seed:video": "node scripts/seedVideoData.mjs"
   },
   "eslintConfig": {
     "extends": [
