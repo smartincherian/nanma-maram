@@ -4,6 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import FilterVintageIcon from "@mui/icons-material/FilterVintage";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import {
   Box,
@@ -68,6 +69,12 @@ const Home = () => {
       helper: "Create or login to your personal prayer bank",
       icon: <AccountCircleIcon />,
       path: "/register-prayer-bank",
+    },
+    {
+      text: "Video Tracking",
+      helper: "Track video production stages & crew",
+      icon: <MovieFilterIcon />,
+      path: "/videos",
     },
     {
       text: "Manage Admins",

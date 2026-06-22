@@ -17,6 +17,10 @@ import Register from "./pages/PrayerBank/Register";
 import SlotEventAdmin from "./pages/SlotEventAdmin";
 import SlotBookingEvent from "./pages/SlotBookingEvent";
 import Admins from "./pages/Admins";
+import VideosDashboard from "./pages/Videos";
+import VideoForm from "./pages/Videos/VideoForm";
+import VideoDetail from "./pages/Videos/VideoDetail";
+import VideoConfig from "./pages/VideoConfig";
 
 function App() {
   return (
@@ -57,6 +61,46 @@ function App() {
             }
           />
           <Route path="/counter/:id" element={<Counter />} />
+          <Route
+            path="/videos"
+            element={
+              <ProtectedRoute>
+                <VideosDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/videos/new"
+            element={
+              <ProtectedRoute>
+                <VideoForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/videos/:id"
+            element={
+              <ProtectedRoute>
+                <VideoDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/videos/:id/edit"
+            element={
+              <ProtectedRoute>
+                <VideoForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/video-config"
+            element={
+              <ProtectedRoute>
+                <VideoConfig />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admins"
             element={
