@@ -19,13 +19,11 @@ import {
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { addCrew, deleteCrew, listCrew, updateCrew } from "../../firebase/video/crew";
-import { seedVideoData } from "../../firebase/video/seed";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
 const EMPTY = { name: "", active: true };
@@ -36,8 +34,6 @@ const CrewTab = () => {
   const [dialog, setDialog] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [seeding, setSeeding] = useState(false);
-  const [seedOpen, setSeedOpen] = useState(false);
 
   const reload = async () => {
     try {
@@ -93,37 +89,17 @@ const CrewTab = () => {
     showSnackbar("Crew member removed", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
   };
 
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      await seedVideoData();
-    } catch (e) {
-      showSnackbar("Could not seed sample data.", SNACK_BAR_SEVERITY_TYPES.ERROR);
-      setSeeding(false);
-      return;
-    }
-    setSeeding(false);
-    setSeedOpen(false);
-    await reload();
-    showSnackbar("Sample data added", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
-  };
-
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
         <Typography sx={{ color: "#5b6472" }}>People who do the work.</Typography>
-        <Stack direction="row" gap={1} sx={{ flexWrap: "wrap" }}>
-          <Button variant="outlined" startIcon={<AutoFixHighRoundedIcon />} onClick={() => setSeedOpen(true)} sx={{ textTransform: "none", fontWeight: 700, borderColor: "rgba(147,81,0,0.5)", color: "#935100" }}>
-            Seed sample data
-          </Button>
-          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => openDialog(null)} sx={amberButtonSx}>
-            Add crew
-          </Button>
-        </Stack>
+        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => openDialog(null)} sx={amberButtonSx}>
+          Add crew
+        </Button>
       </Stack>
 
       <Stack spacing={1.25}>
-        {crew.length === 0 ? <Typography sx={{ color: "#8a6a36" }}>No crew yet. Use “Seed sample data” to load the team.</Typography> : null}
+        {crew.length === 0 ? <Typography sx={{ color: "#8a6a36" }}>No crew yet. Tap “Add crew” to add the team.</Typography> : null}
         {crew.map((member) => (
           <Paper key={member.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 1, opacity: member.active === false ? 0.55 : 1 }}>
             <Typography sx={{ flexGrow: 1, fontWeight: 700, color: "#3b2a13", minWidth: 0 }}>{member.name}</Typography>
@@ -156,19 +132,6 @@ const CrewTab = () => {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteTarget(null)} sx={{ textTransform: "none" }}>Cancel</Button>
           <Button variant="contained" color="error" onClick={handleDelete} sx={{ textTransform: "none", fontWeight: 700 }}>Confirm delete</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={seedOpen} onClose={() => setSeedOpen(false)}>
-        <DialogTitle sx={{ fontWeight: 800 }}>Seed sample data?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Adds the default steps and the 34 crew members — but only for collections that are still empty. Safe to run once.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setSeedOpen(false)} sx={{ textTransform: "none" }}>Cancel</Button>
-          <Button variant="contained" onClick={handleSeed} disabled={seeding} sx={amberButtonSx}>{seeding ? "Seeding…" : "Seed data"}</Button>
         </DialogActions>
       </Dialog>
     </Box>
