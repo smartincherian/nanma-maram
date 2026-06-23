@@ -18,24 +18,40 @@ export const PRIORITY = {
   HIGH: "high",
 };
 
-// Build the embedded stages[] for a brand new video from its type's ordered
-// stageIds. Names are snapshotted from stagesById so later renames/deletes of
-// the master stage never mutate this video.
-export const buildStagesForType = (type, stagesById = {}) => {
-  const stageIds = (type && type.stageIds) || [];
-  return stageIds
-    .map((stageId) => stagesById[stageId])
-    .filter(Boolean)
-    .map((stage, index) => ({
-      stageId: stage.id,
-      name: stage.name,
-      order: index,
-      assigneeId: null,
-      assigneeName: null,
-      status: STAGE_STATUS.PENDING,
-      note: "",
-      completedAt: null,
-    }));
+// Normalize a pipeline so exactly one stage is active: the first not-done stage
+// becomes in_progress, every later not-done stage becomes pending, and done
+// stages are left as-is. This single rule drives all auto-advancing — on
+// create, after a stage is completed, and after a stage is reopened.
+export const advancePipeline = (stages = []) => {
+  let activated = false;
+  return stages.map((stage) => {
+    if (stage.status === STAGE_STATUS.DONE) {
+      return stage;
+    }
+    if (!activated) {
+      activated = true;
+      return { ...stage, status: STAGE_STATUS.IN_PROGRESS };
+    }
+    return { ...stage, status: STAGE_STATUS.PENDING };
+  });
+};
+
+// Build the embedded stages[] for a brand new video from the global, ordered
+// list of steps. Names are snapshotted so later renames/deletes of a master
+// step never mutate existing videos. The pipeline is normalized so the first
+// step starts in_progress.
+export const buildStagesFromList = (steps = []) => {
+  const stages = steps.map((step, index) => ({
+    stageId: step.id,
+    name: step.name,
+    order: index,
+    assigneeId: null,
+    assigneeName: null,
+    status: STAGE_STATUS.PENDING,
+    note: "",
+    completedAt: null,
+  }));
+  return advancePipeline(stages);
 };
 
 // A video is completed only when it has stages and every one is done.
@@ -56,33 +72,4 @@ export const progress = (video) => {
 export const currentStage = (video) => {
   const stages = (video && video.stages) || [];
   return stages.find((s) => s.status !== STAGE_STATUS.DONE) || null;
-};
-
-// For each crew member, gather their active (non-done) assignments across
-// active videos. Busy = at least one such assignment.
-export const computeCrewWorkload = (videos = [], crew = []) => {
-  return crew.map((member) => {
-    const assignments = [];
-
-    videos.forEach((video) => {
-      if (video.status !== VIDEO_STATUS.ACTIVE) {
-        return;
-      }
-      (video.stages || []).forEach((stage) => {
-        if (
-          stage.assigneeId === member.id &&
-          stage.status !== STAGE_STATUS.DONE
-        ) {
-          assignments.push({
-            videoId: video.id,
-            videoTitle: video.title,
-            stageName: stage.name,
-            status: stage.status,
-          });
-        }
-      });
-    });
-
-    return { ...member, busy: assignments.length > 0, assignments };
-  });
 };

@@ -14,6 +14,7 @@ import { DB } from "../../config/firebase";
 import {
   STAGE_STATUS,
   VIDEO_STATUS,
+  advancePipeline,
   deriveStatus,
 } from "../../utils/videoWorkflow";
 
@@ -50,27 +51,13 @@ export const subscribeVideo = (id, cb) =>
     cb(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
   });
 
-export const addVideo = async ({
-  title,
-  typeId,
-  typeName,
-  priority,
-  targetDate,
-  sourceLink,
-  stages,
-  createdBy,
-}) => {
+export const addVideo = async ({ title, stages, createdBy }) => {
   const trimmed = (title || "").trim();
   if (!trimmed) {
     throw new Error("Video title is required.");
   }
   const ref = await addDoc(collection(DB, VIDEOS), {
     title: trimmed,
-    typeId: typeId || "",
-    typeName: typeName || "",
-    priority: priority || "normal",
-    targetDate: targetDate || null,
-    sourceLink: (sourceLink || "").trim(),
     status: deriveStatus(stages || []),
     stages: stages || [],
     createdBy: createdBy || "",
@@ -98,7 +85,7 @@ export const updateVideoStage = async (videoId, stageId, patch, adminEmail) => {
       throw new Error("Video not found.");
     }
     const data = snapshot.data();
-    const stages = (data.stages || []).map((stage) => {
+    const patched = (data.stages || []).map((stage) => {
       if (stage.stageId !== stageId) {
         return stage;
       }
@@ -110,6 +97,9 @@ export const updateVideoStage = async (videoId, stageId, patch, adminEmail) => {
       }
       return next;
     });
+    // Re-normalize so the next stage auto-starts (or the earliest unfinished
+    // stage reactivates after a reopen).
+    const stages = advancePipeline(patched);
 
     tx.update(ref, {
       stages,

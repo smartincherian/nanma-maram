@@ -81,7 +81,7 @@ const StagesTab = () => {
     }
     setDeleteTarget(null);
     await reload();
-    showSnackbar("Stage removed", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+    showSnackbar("Step removed", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
   };
 
   const move = async (index, delta) => {
@@ -101,14 +101,14 @@ const StagesTab = () => {
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography sx={{ color: "#5b6472" }}>The master list of production stages, in order.</Typography>
+        <Typography sx={{ color: "#5b6472" }}>The steps every video goes through, in order.</Typography>
         <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setDialog({ name: "" })} sx={amberButtonSx}>
-          Add stage
+          Add step
         </Button>
       </Stack>
 
       <Stack spacing={1.5}>
-        {stages.length === 0 ? <Typography sx={{ color: "#8a6a36" }}>No stages yet.</Typography> : null}
+        {stages.length === 0 ? <Typography sx={{ color: "#8a6a36" }}>No steps yet.</Typography> : null}
         {stages.map((stage, index) => (
           <Paper key={stage.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 1 }}>
             <Stack>
@@ -133,9 +133,9 @@ const StagesTab = () => {
       </Stack>
 
       <Dialog open={dialog !== null} onClose={() => setDialog(null)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: 800 }}>{dialog?.id ? "Edit stage" : "Add stage"}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800 }}>{dialog?.id ? "Edit step" : "Add step"}</DialogTitle>
         <DialogContent>
-          <TextField autoFocus label="Stage name" value={dialog?.name || ""} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} fullWidth sx={{ mt: 1 }} />
+          <TextField autoFocus label="Step name" value={dialog?.name || ""} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} fullWidth sx={{ mt: 1 }} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialog(null)} sx={{ textTransform: "none" }}>Cancel</Button>
@@ -144,10 +144,10 @@ const StagesTab = () => {
       </Dialog>
 
       <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle sx={{ fontWeight: 800 }}>Remove stage?</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800 }}>Remove step?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {deleteTarget ? `"${deleteTarget.name}" will be removed from all video types. Existing videos keep their snapshot.` : ""}
+            {deleteTarget ? `"${deleteTarget.name}" will be removed. Existing videos keep their own steps.` : ""}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

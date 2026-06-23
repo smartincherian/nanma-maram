@@ -11,7 +11,6 @@ import {
 import { DB } from "../../config/firebase";
 
 const STAGES = "videoStages";
-const TYPES = "videoTypes";
 
 const toMillis = (value) =>
   value && typeof value.toMillis === "function" ? value.toMillis() : value || 0;
@@ -44,25 +43,10 @@ export const updateStage = async (id, { name }) => {
   await updateDoc(doc(DB, STAGES, id), { name: (name || "").trim() });
 };
 
-// Delete the stage and strip its id from every video type's pipeline.
+// Delete a step. Existing videos keep their own snapshot of steps, so this only
+// affects which steps new videos get.
 export const deleteStage = async (id) => {
   await deleteDoc(doc(DB, STAGES, id));
-
-  const types = await getDocs(collection(DB, TYPES));
-  const batch = writeBatch(DB);
-  let touched = false;
-  types.docs.forEach((d) => {
-    const stageIds = d.data().stageIds || [];
-    if (stageIds.includes(id)) {
-      batch.update(doc(DB, TYPES, d.id), {
-        stageIds: stageIds.filter((sid) => sid !== id),
-      });
-      touched = true;
-    }
-  });
-  if (touched) {
-    await batch.commit();
-  }
 };
 
 export const reorderStages = async (orderedIds) => {

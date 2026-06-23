@@ -1,30 +1,93 @@
 import {
   STAGE_STATUS,
   VIDEO_STATUS,
-  buildStagesForType,
+  advancePipeline,
+  buildStagesFromList,
   deriveStatus,
   progress,
   currentStage,
   computeCrewWorkload,
 } from "./videoWorkflow";
 
-describe("buildStagesForType", () => {
-  const stagesById = {
-    s1: { id: "s1", name: "Source", order: 0 },
-    s2: { id: "s2", name: "Edit", order: 1 },
-    s3: { id: "s3", name: "Upload", order: 2 },
-  };
+describe("advancePipeline", () => {
+  it("makes the first not-done stage in_progress and the rest pending", () => {
+    const result = advancePipeline([
+      { stageId: "a", status: STAGE_STATUS.PENDING },
+      { stageId: "b", status: STAGE_STATUS.PENDING },
+      { stageId: "c", status: STAGE_STATUS.PENDING },
+    ]);
+    expect(result.map((s) => s.status)).toEqual([
+      STAGE_STATUS.IN_PROGRESS,
+      STAGE_STATUS.PENDING,
+      STAGE_STATUS.PENDING,
+    ]);
+  });
 
-  it("builds stages in the order given by type.stageIds, pulling names", () => {
-    const type = { id: "t1", name: "Short", stageIds: ["s3", "s1"] };
+  it("keeps done stages and activates the first stage after them", () => {
+    const result = advancePipeline([
+      { stageId: "a", status: STAGE_STATUS.DONE },
+      { stageId: "b", status: STAGE_STATUS.PENDING },
+      { stageId: "c", status: STAGE_STATUS.PENDING },
+    ]);
+    expect(result.map((s) => s.status)).toEqual([
+      STAGE_STATUS.DONE,
+      STAGE_STATUS.IN_PROGRESS,
+      STAGE_STATUS.PENDING,
+    ]);
+  });
 
-    const result = buildStagesForType(type, stagesById);
+  it("normalizes a mid-pipeline in_progress back to the earliest unfinished stage", () => {
+    const result = advancePipeline([
+      { stageId: "a", status: STAGE_STATUS.PENDING },
+      { stageId: "b", status: STAGE_STATUS.IN_PROGRESS },
+    ]);
+    expect(result.map((s) => s.status)).toEqual([
+      STAGE_STATUS.IN_PROGRESS,
+      STAGE_STATUS.PENDING,
+    ]);
+  });
+
+  it("leaves an all-done pipeline untouched (no active stage)", () => {
+    const result = advancePipeline([
+      { stageId: "a", status: STAGE_STATUS.DONE },
+      { stageId: "b", status: STAGE_STATUS.DONE },
+    ]);
+    expect(result.map((s) => s.status)).toEqual([
+      STAGE_STATUS.DONE,
+      STAGE_STATUS.DONE,
+    ]);
+  });
+
+  it("returns an empty array unchanged", () => {
+    expect(advancePipeline([])).toEqual([]);
+  });
+});
+
+describe("buildStagesFromList", () => {
+  const steps = [
+    { id: "s1", name: "Source" },
+    { id: "s2", name: "Edit" },
+    { id: "s3", name: "Upload" },
+  ];
+
+  it("builds stages in order, snapshotting names, with the first step active", () => {
+    const result = buildStagesFromList(steps);
 
     expect(result).toEqual([
       {
-        stageId: "s3",
-        name: "Upload",
+        stageId: "s1",
+        name: "Source",
         order: 0,
+        assigneeId: null,
+        assigneeName: null,
+        status: STAGE_STATUS.IN_PROGRESS,
+        note: "",
+        completedAt: null,
+      },
+      {
+        stageId: "s2",
+        name: "Edit",
+        order: 1,
         assigneeId: null,
         assigneeName: null,
         status: STAGE_STATUS.PENDING,
@@ -32,9 +95,9 @@ describe("buildStagesForType", () => {
         completedAt: null,
       },
       {
-        stageId: "s1",
-        name: "Source",
-        order: 1,
+        stageId: "s3",
+        name: "Upload",
+        order: 2,
         assigneeId: null,
         assigneeName: null,
         status: STAGE_STATUS.PENDING,
@@ -44,16 +107,8 @@ describe("buildStagesForType", () => {
     ]);
   });
 
-  it("skips stage ids that are missing from stagesById", () => {
-    const type = { id: "t1", name: "Short", stageIds: ["s1", "missing", "s2"] };
-
-    const result = buildStagesForType(type, stagesById);
-
-    expect(result.map((s) => s.stageId)).toEqual(["s1", "s2"]);
-  });
-
-  it("returns an empty array when the type has no stageIds", () => {
-    expect(buildStagesForType({ name: "X" }, stagesById)).toEqual([]);
+  it("returns an empty array when there are no steps", () => {
+    expect(buildStagesFromList([])).toEqual([]);
   });
 });
 
@@ -115,77 +170,5 @@ describe("currentStage", () => {
       stages: [{ status: STAGE_STATUS.DONE }],
     };
     expect(currentStage(video)).toBeNull();
-  });
-});
-
-describe("computeCrewWorkload", () => {
-  const crew = [
-    { id: "c1", name: "Binla" },
-    { id: "c2", name: "Feba" },
-    { id: "c3", name: "Hima" },
-  ];
-
-  it("marks crew busy for non-done stages on active videos, free otherwise", () => {
-    const videos = [
-      {
-        id: "v1",
-        title: "Easter Short",
-        status: VIDEO_STATUS.ACTIVE,
-        stages: [
-          {
-            stageId: "s1",
-            name: "Edit",
-            assigneeId: "c1",
-            status: STAGE_STATUS.IN_PROGRESS,
-          },
-          {
-            stageId: "s2",
-            name: "Upload",
-            assigneeId: "c2",
-            status: STAGE_STATUS.DONE,
-          },
-        ],
-      },
-    ];
-
-    const result = computeCrewWorkload(videos, crew);
-    const byId = Object.fromEntries(result.map((r) => [r.id, r]));
-
-    expect(byId.c1.busy).toBe(true);
-    expect(byId.c1.assignments).toEqual([
-      {
-        videoId: "v1",
-        videoTitle: "Easter Short",
-        stageName: "Edit",
-        status: STAGE_STATUS.IN_PROGRESS,
-      },
-    ]);
-    // c2 only has a done stage -> free
-    expect(byId.c2.busy).toBe(false);
-    expect(byId.c2.assignments).toEqual([]);
-    // c3 has nothing -> free
-    expect(byId.c3.busy).toBe(false);
-  });
-
-  it("ignores completed videos when computing busyness", () => {
-    const videos = [
-      {
-        id: "v1",
-        title: "Done One",
-        status: VIDEO_STATUS.COMPLETED,
-        stages: [
-          {
-            stageId: "s1",
-            name: "Edit",
-            assigneeId: "c1",
-            status: STAGE_STATUS.IN_PROGRESS,
-          },
-        ],
-      },
-    ];
-
-    const result = computeCrewWorkload(videos, crew);
-    const c1 = result.find((r) => r.id === "c1");
-    expect(c1.busy).toBe(false);
   });
 });

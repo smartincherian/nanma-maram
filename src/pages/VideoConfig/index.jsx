@@ -4,8 +4,6 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../components/AuthProvider";
 import StagesTab from "./StagesTab";
-import SkillsTab from "./SkillsTab";
-import TypesTab from "./TypesTab";
 import CrewTab from "./CrewTab";
 
 const VideoConfig = () => {
@@ -21,10 +19,10 @@ const VideoConfig = () => {
             Owners only
           </Typography>
           <Typography sx={{ color: "#5b6472", mb: 3 }}>
-            Only owner accounts can manage video stages, types, skills and crew.
+            Only owner accounts can manage video steps and crew.
           </Typography>
           <Button variant="contained" onClick={() => navigate("/videos")} sx={{ textTransform: "none", fontWeight: 700 }}>
-            Back to Video Tracking
+            Back to Videos
           </Button>
         </Paper>
       </Container>
@@ -32,41 +30,36 @@ const VideoConfig = () => {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 3, sm: 5 } }}>
+    <Container maxWidth="sm" sx={{ py: { xs: 2.5, sm: 5 }, px: { xs: 1.5, sm: 3 } }}>
       <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
         <Button
           startIcon={<ArrowBackRoundedIcon />}
           onClick={() => navigate("/videos")}
-          sx={{ textTransform: "none", color: "#6f3a00", fontWeight: 600 }}
+          sx={{ textTransform: "none", color: "#6f3a00", fontWeight: 600, minWidth: 0 }}
         >
-          Video Tracking
+          Videos
         </Button>
       </Stack>
 
-      <Typography variant="h4" sx={{ fontWeight: 800, color: "#1f2937", mb: 0.5 }}>
-        Video Configuration
+      <Typography sx={{ fontWeight: 800, color: "#1f2937", mb: 0.5, fontSize: { xs: "1.5rem", sm: "2rem" } }}>
+        Manage
       </Typography>
       <Typography sx={{ color: "#5b6472", mb: 2 }}>
-        Manage the stages, video types, work skills and the production crew.
+        Set the production steps and the crew.
       </Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-        <Tabs value={tab} onChange={(_e, v) => setTab(v)} variant="scrollable" scrollButtons="auto"
+        <Tabs value={tab} onChange={(_e, v) => setTab(v)}
           textColor="inherit"
           TabIndicatorProps={{ sx: { backgroundColor: "#d67b1f" } }}
           sx={{ "& .Mui-selected": { color: "#8a4b00" }, "& .MuiTab-root": { textTransform: "none", fontWeight: 700 } }}
         >
-          <Tab label="Stages" />
-          <Tab label="Video Types" />
-          <Tab label="Skills" />
+          <Tab label="Steps" />
           <Tab label="Crew" />
         </Tabs>
       </Box>
 
-      {tab === 0 ? <StagesTab /> : null}
-      {tab === 1 ? <TypesTab /> : null}
-      {tab === 2 ? <SkillsTab /> : null}
-      {tab === 3 ? <CrewTab /> : null}
+      {tab === 0 ? <StagesTab /> : <CrewTab />}
     </Container>
   );
 };

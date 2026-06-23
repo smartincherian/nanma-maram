@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useState } from "react";
 import {
   Box,
   Button,
-  Checkbox,
   Chip,
   Dialog,
   DialogActions,
@@ -11,11 +10,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  ListItemText,
-  MenuItem,
-  OutlinedInput,
   Paper,
-  Select,
   Stack,
   Switch,
   TextField,
@@ -30,29 +25,23 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { addCrew, deleteCrew, listCrew, updateCrew } from "../../firebase/video/crew";
-import { listSkills } from "../../firebase/video/skills";
 import { seedVideoData } from "../../firebase/video/seed";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
-const EMPTY = { name: "", skills: [], linkedEmail: "", active: true };
+const EMPTY = { name: "", active: true };
 
 const CrewTab = () => {
   const { showSnackbar } = useContext(SnackbarContext);
   const [crew, setCrew] = useState([]);
-  const [skills, setSkills] = useState([]);
   const [dialog, setDialog] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
 
-  const skillName = (id) => skills.find((s) => s.id === id)?.name || "—";
-
   const reload = async () => {
     try {
-      const [c, s] = await Promise.all([listCrew(), listSkills()]);
-      setCrew(c);
-      setSkills(s);
+      setCrew(await listCrew());
     } catch (e) {
       showSnackbar("Could not load crew.", SNACK_BAR_SEVERITY_TYPES.ERROR);
     }
@@ -66,7 +55,7 @@ const CrewTab = () => {
   const openDialog = (member) =>
     setDialog(
       member
-        ? { id: member.id, name: member.name, skills: [...(member.skills || [])], linkedEmail: member.linkedEmail || "", active: member.active !== false }
+        ? { id: member.id, name: member.name, active: member.active !== false }
         : { ...EMPTY }
     );
 
@@ -75,7 +64,7 @@ const CrewTab = () => {
     if (!name) return;
     setSaving(true);
     try {
-      const payload = { name, skills: dialog.skills, linkedEmail: dialog.linkedEmail, active: dialog.active };
+      const payload = { name, active: dialog.active };
       if (dialog.id) {
         await updateCrew(dialog.id, payload);
       } else {
@@ -122,8 +111,8 @@ const CrewTab = () => {
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
-        <Typography sx={{ color: "#5b6472" }}>People who do the production work.</Typography>
-        <Stack direction="row" gap={1}>
+        <Typography sx={{ color: "#5b6472" }}>People who do the work.</Typography>
+        <Stack direction="row" gap={1} sx={{ flexWrap: "wrap" }}>
           <Button variant="outlined" startIcon={<AutoFixHighRoundedIcon />} onClick={() => setSeedOpen(true)} sx={{ textTransform: "none", fontWeight: 700, borderColor: "rgba(147,81,0,0.5)", color: "#935100" }}>
             Seed sample data
           </Button>
@@ -133,22 +122,12 @@ const CrewTab = () => {
         </Stack>
       </Stack>
 
-      <Stack spacing={1.5}>
+      <Stack spacing={1.25}>
         {crew.length === 0 ? <Typography sx={{ color: "#8a6a36" }}>No crew yet. Use “Seed sample data” to load the team.</Typography> : null}
         {crew.map((member) => (
-          <Paper key={member.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 2, opacity: member.active === false ? 0.55 : 1 }}>
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
-                <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>{member.name}</Typography>
-                {member.active === false ? <Chip size="small" label="Inactive" sx={{ backgroundColor: "rgba(91,100,114,0.14)", color: "#5b6472" }} /> : null}
-              </Stack>
-              <Stack direction="row" gap={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
-                {(member.skills || []).map((id) => (
-                  <Chip key={id} size="small" label={skillName(id)} sx={{ backgroundColor: "rgba(37,99,235,0.1)", color: "#1d4ed8", fontWeight: 600 }} />
-                ))}
-              </Stack>
-              {member.linkedEmail ? <Typography sx={{ color: "#5b6472", fontSize: "0.85rem", mt: 0.5, wordBreak: "break-all" }}>{member.linkedEmail}</Typography> : null}
-            </Box>
+          <Paper key={member.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 1, opacity: member.active === false ? 0.55 : 1 }}>
+            <Typography sx={{ flexGrow: 1, fontWeight: 700, color: "#3b2a13", minWidth: 0 }}>{member.name}</Typography>
+            {member.active === false ? <Chip size="small" label="Inactive" sx={{ backgroundColor: "rgba(91,100,114,0.14)", color: "#5b6472" }} /> : null}
             <IconButton aria-label={`Edit ${member.name}`} onClick={() => openDialog(member)} sx={{ color: "#935100" }}><EditRoundedIcon /></IconButton>
             <IconButton aria-label={`Delete ${member.name}`} onClick={() => setDeleteTarget(member)} sx={{ color: "#b3261e" }}><DeleteOutlineRoundedIcon /></IconButton>
           </Paper>
@@ -159,23 +138,7 @@ const CrewTab = () => {
         <DialogTitle sx={{ fontWeight: 800 }}>{dialog?.id ? "Edit crew member" : "Add crew member"}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Name" value={dialog?.name || ""} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} fullWidth required />
-            <Select
-              multiple
-              displayEmpty
-              value={dialog?.skills || []}
-              onChange={(e) => setDialog((d) => ({ ...d, skills: e.target.value }))}
-              input={<OutlinedInput />}
-              renderValue={(selected) => (selected.length === 0 ? <span style={{ color: "#8a6a36" }}>Skills…</span> : selected.map(skillName).join(", "))}
-            >
-              {skills.map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  <Checkbox checked={(dialog?.skills || []).includes(s.id)} />
-                  <ListItemText primary={s.name} />
-                </MenuItem>
-              ))}
-            </Select>
-            <TextField label="Linked admin email (optional)" value={dialog?.linkedEmail || ""} onChange={(e) => setDialog((d) => ({ ...d, linkedEmail: e.target.value }))} fullWidth />
+            <TextField label="Name" value={dialog?.name || ""} onChange={(e) => setDialog((d) => ({ ...d, name: e.target.value }))} fullWidth required autoFocus />
             <FormControlLabel control={<Switch checked={dialog?.active !== false} onChange={(e) => setDialog((d) => ({ ...d, active: e.target.checked }))} />} label="Active (assignable)" />
           </Stack>
         </DialogContent>
@@ -200,7 +163,7 @@ const CrewTab = () => {
         <DialogTitle sx={{ fontWeight: 800 }}>Seed sample data?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Adds the default stages, video types, skills and the 34 crew members — but only for collections that are still empty. Safe to run once.
+            Adds the default steps and the 34 crew members — but only for collections that are still empty. Safe to run once.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

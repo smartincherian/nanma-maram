@@ -1,6 +1,6 @@
 // Shared style tokens + status metadata for the video tracking screens, kept in
 // one place so the amber/blue theme stays consistent across pages.
-import { STAGE_STATUS, VIDEO_STATUS, PRIORITY } from "../../utils/videoWorkflow";
+import { STAGE_STATUS, VIDEO_STATUS } from "../../utils/videoWorkflow";
 
 export const AMBER_GRADIENT = "linear-gradient(135deg, #935100 0%, #d67b1f 100%)";
 export const AMBER_GRADIENT_HOVER =
@@ -34,9 +34,4 @@ export const VIDEO_STATUS_META = {
   [VIDEO_STATUS.ACTIVE]: { label: "Active", color: "#8a4b00", bg: "rgba(214, 123, 31, 0.16)" },
   [VIDEO_STATUS.COMPLETED]: { label: "Completed", color: "#1b5e20", bg: "rgba(46, 125, 50, 0.16)" },
   [VIDEO_STATUS.ON_HOLD]: { label: "On hold", color: "#5b6472", bg: "rgba(91, 100, 114, 0.14)" },
-};
-
-export const PRIORITY_META = {
-  [PRIORITY.NORMAL]: { label: "Normal", color: "#5b6472", bg: "rgba(91, 100, 114, 0.12)" },
-  [PRIORITY.HIGH]: { label: "High", color: "#b3261e", bg: "rgba(179, 38, 30, 0.12)" },
 };

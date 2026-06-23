@@ -64,6 +64,35 @@ describe("updateVideoStage", () => {
     expect(written.status).toBe(VIDEO_STATUS.COMPLETED);
   });
 
+  it("auto-starts the next stage when a non-last stage is completed", async () => {
+    const stages = [
+      { stageId: "s1", name: "Source", status: STAGE_STATUS.IN_PROGRESS, completedAt: null },
+      { stageId: "s2", name: "Edit", status: STAGE_STATUS.PENDING, completedAt: null },
+      { stageId: "s3", name: "Upload", status: STAGE_STATUS.PENDING, completedAt: null },
+    ];
+
+    const written = await run(stages, "s1", { status: STAGE_STATUS.DONE });
+
+    const byId = Object.fromEntries(written.stages.map((s) => [s.stageId, s]));
+    expect(byId.s1.status).toBe(STAGE_STATUS.DONE);
+    expect(byId.s2.status).toBe(STAGE_STATUS.IN_PROGRESS);
+    expect(byId.s3.status).toBe(STAGE_STATUS.PENDING);
+    expect(written.status).toBe(VIDEO_STATUS.ACTIVE);
+  });
+
+  it("reactivates the earliest unfinished stage when a done stage is reopened", async () => {
+    const stages = [
+      { stageId: "s1", name: "Source", status: STAGE_STATUS.DONE, completedAt: 1 },
+      { stageId: "s2", name: "Edit", status: STAGE_STATUS.IN_PROGRESS, completedAt: null },
+    ];
+
+    const written = await run(stages, "s1", { status: STAGE_STATUS.PENDING });
+
+    const byId = Object.fromEntries(written.stages.map((s) => [s.stageId, s]));
+    expect(byId.s1.status).toBe(STAGE_STATUS.IN_PROGRESS);
+    expect(byId.s2.status).toBe(STAGE_STATUS.PENDING);
+  });
+
   it("clears completedAt when a stage moves back from done", async () => {
     const stages = [
       {

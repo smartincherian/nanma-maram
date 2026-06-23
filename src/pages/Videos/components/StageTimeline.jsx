@@ -1,22 +1,26 @@
 import React from "react";
 import { Box, Button, Link, Stack, Typography } from "@mui/material";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import dayjs from "dayjs";
 import { STAGE_STATUS } from "../../../utils/videoWorkflow";
-import { STAGE_STATUS_META } from "../ui";
+import { STAGE_STATUS_META, amberButtonSx } from "../ui";
 import StatusChip from "./StatusChip";
 
 const isUrl = (s) => typeof s === "string" && /^https?:\/\//i.test(s.trim());
 
 // Vertical timeline of a video's stages, styled after an order-tracking view:
 // a coloured dot + connector per stage, with assignee, status, timestamp, note.
-const StageTimeline = ({ stages = [], onEditStage, canEdit = true }) => {
+// The single active (in_progress) stage gets a prominent "Mark complete"
+// button; every stage also has a small "Edit" link for assignee/note/reopen.
+const StageTimeline = ({ stages = [], onCompleteStage, onEditStage, canEdit = true }) => {
   return (
     <Stack>
       {stages.map((stage, index) => {
         const meta = STAGE_STATUS_META[stage.status] || STAGE_STATUS_META.pending;
         const isLast = index === stages.length - 1;
         const done = stage.status === STAGE_STATUS.DONE;
+        const active = stage.status === STAGE_STATUS.IN_PROGRESS;
         return (
           <Box key={stage.stageId} sx={{ display: "flex", gap: 2 }}>
             {/* Rail */}
@@ -30,7 +34,7 @@ const StageTimeline = ({ stages = [], onEditStage, canEdit = true }) => {
             {/* Content */}
             <Box sx={{ flexGrow: 1, pb: isLast ? 0 : 3, minWidth: 0 }}>
               <Stack direction="row" alignItems="center" gap={1} sx={{ flexWrap: "wrap" }}>
-                <Typography sx={{ fontWeight: 800, color: "#1f2937", fontSize: "1.05rem" }}>{stage.name}</Typography>
+                <Typography sx={{ fontWeight: 800, color: "#1f2937", fontSize: { xs: "0.98rem", sm: "1.05rem" } }}>{stage.name}</Typography>
                 <StatusChip status={stage.status} />
               </Stack>
 
@@ -60,9 +64,26 @@ const StageTimeline = ({ stages = [], onEditStage, canEdit = true }) => {
               ) : null}
 
               {canEdit ? (
-                <Button size="small" onClick={() => onEditStage(stage)} sx={{ mt: 0.75, textTransform: "none", fontWeight: 700, color: "#935100", px: 0 }}>
-                  Update stage
-                </Button>
+                <Stack direction="row" alignItems="center" gap={1.5} sx={{ mt: 1, flexWrap: "wrap" }}>
+                  {active ? (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<CheckRoundedIcon />}
+                      onClick={() => onCompleteStage(stage)}
+                      sx={{ ...amberButtonSx, px: 2 }}
+                    >
+                      Mark complete
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="small"
+                    onClick={() => onEditStage(stage)}
+                    sx={{ textTransform: "none", fontWeight: 700, color: "#935100", px: 0, minWidth: 0 }}
+                  >
+                    Edit
+                  </Button>
+                </Stack>
               ) : null}
             </Box>
           </Box>
