@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
-  Avatar, Box, Card, CardContent, Chip, CircularProgress, Container, Divider,
+  Avatar, Box, Card, CardContent, Chip, CircularProgress, Container,
   FormControlLabel, IconButton, Menu, MenuItem, Stack, Switch, Typography,
 } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
@@ -10,7 +10,17 @@ import { useAuth } from "../../components/AuthProvider";
 import { signOutUser } from "../../firebase/auth";
 import { setCrewAvailability } from "../../firebase/video/crew";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
+import MandalaDivider, { CrewWatermark } from "../../components/MandalaDivider";
 import { cardSx } from "../Videos/ui";
+
+const eyebrowSx = {
+  display: "block",
+  fontWeight: 700,
+  letterSpacing: "0.18em",
+  color: "#935100",
+  textTransform: "uppercase",
+  fontSize: "0.72rem",
+};
 
 const pageSx = {
   minHeight: "100vh",
@@ -60,8 +70,9 @@ const CrewHome = () => {
   return (
     <Box sx={pageSx}>
       <Container maxWidth="sm">
-        <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
-          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+        <Card elevation={0} sx={{ position: "relative", overflow: "hidden", ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
+          <CrewWatermark />
+          <CardContent sx={{ p: { xs: 3, sm: 4 }, position: "relative" }}>
             <Stack spacing={2}>
               <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
                 <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0, mt: 0.5 }}>
@@ -84,13 +95,13 @@ const CrewHome = () => {
                 </Menu>
               </Stack>
 
-              <Divider />
+              <MandalaDivider sx={{ my: 0.5 }} />
 
               {!hasAssignedWork ? (
                 <Box>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                     <Box>
-                      <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>Availability</Typography>
+                      <Typography variant="overline" sx={eyebrowSx}>Availability</Typography>
                       <Typography variant="body2" sx={{ color: "#5b6472" }}>
                         {available ? "You're available for new work." : "You're marked as not available."}
                       </Typography>
@@ -121,11 +132,11 @@ const CrewHome = () => {
                 </Box>
               ) : null}
 
-              <Divider />
+              <MandalaDivider sx={{ my: 0.5 }} />
 
               <Box>
-                <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>Your works</Typography>
-                <Typography variant="body2" sx={{ color: "#8a6a36" }}>
+                <Typography variant="overline" sx={eyebrowSx}>Your works</Typography>
+                <Typography variant="body2" sx={{ color: "#8a6a36", mt: 0.25 }}>
                   No works assigned yet — your pending works will appear here. (Coming soon)
                 </Typography>
               </Box>

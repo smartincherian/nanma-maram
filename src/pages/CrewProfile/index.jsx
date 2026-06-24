@@ -7,6 +7,7 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { updateCrewProfile } from "../../firebase/video/crew";
 import SkillsSelect from "../../components/SkillsSelect";
+import { CrewWatermark } from "../../components/MandalaDivider";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
@@ -57,8 +58,9 @@ const CrewProfile = () => {
   return (
     <Box sx={pageSx}>
       <Container maxWidth="sm">
-        <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+        <Card elevation={0} sx={{ position: "relative", overflow: "hidden", ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
+          <CrewWatermark />
+          <CardContent sx={{ p: { xs: 2.5, sm: 3.5 }, position: "relative" }}>
             <Stack spacing={2.25}>
               <Button
                 onClick={() => navigate("/crew")}
