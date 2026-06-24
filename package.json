@@ -1,6 +1,6 @@
 {
   "name": "nanma-maram",
-  "version": "1.12.6",
+  "version": "1.12.7",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.13.0",

@@ -208,7 +208,7 @@ const CrewJoin = () => {
           </Select>
         </Box>
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>
-          Begin serving
+          Yes, I'll serve
         </Button>
       </Stack>
     </Centered>
