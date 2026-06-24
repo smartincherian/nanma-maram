@@ -69,10 +69,13 @@ const CrewJoin = () => {
       <Centered>
         <Stack spacing={2} alignItems="center" textAlign="center">
           <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13" }}>
-            Join the video crew
+            Serve Jesus with your gifts
           </Typography>
           <Typography sx={{ color: "#5b6472" }}>
-            Sign in with your Google account to register.
+            Sign in with Google to join the media ministry and serve the Lord together.
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
+            “Each of you should use whatever gift you have to serve others.” — 1 Peter 4:10
           </Typography>
           <Button
             variant="contained" startIcon={<GoogleIcon />} disabled={signingIn}
@@ -89,7 +92,7 @@ const CrewJoin = () => {
     return (
       <Centered>
         <Typography sx={{ color: "#8a6a36", textAlign: "center", fontWeight: 600 }}>
-          Your crew access is paused. Please contact an admin.
+          Your place in the ministry is resting for now. Please reach out to an admin — God bless you. 🙏
         </Typography>
       </Centered>
     );
@@ -104,10 +107,10 @@ const CrewJoin = () => {
         phone,
         skills,
       });
-      showSnackbar("You're registered!", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      showSnackbar("Welcome to the ministry! May God bless your service. 🙏", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
       setRegistered(true);
     } catch (e) {
-      showSnackbar(e?.message || "Could not register.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+      showSnackbar(e?.message || "Something went wrong. Please try again.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       setSaving(false);
     }
   };
@@ -118,12 +121,15 @@ const CrewJoin = () => {
     <Centered>
       <Stack spacing={2.5}>
         <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13" }}>
-          Register as crew
+          Offer your gifts for His glory
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
+          “Whatever you do, work heartily, as for the Lord.” — Colossians 3:23
         </Typography>
         {isAllowed ? (
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ flexWrap: "wrap", gap: 1 }}>
             <Typography variant="body2" sx={{ color: "#5b6472" }}>
-              You're an admin — registering as crew keeps your video access.
+              You're an admin — serving as crew keeps your video access.
             </Typography>
             <Button component={RouterLink} to="/videos" size="small" sx={{ textTransform: "none", fontWeight: 700, color: "#935100" }}>
               Go to Videos
@@ -134,11 +140,11 @@ const CrewJoin = () => {
         <TextField label="Email" value={user.email || ""} fullWidth InputProps={{ readOnly: true }} />
         <TextField
           label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)}
-          fullWidth required placeholder="Your contact number"
+          fullWidth required placeholder="A number we can reach you on"
         />
         <Box>
           <Typography variant="body2" sx={{ color: "#5b6472", fontWeight: 600, mb: 0.75 }}>
-            Your skills
+            How you'd like to serve
           </Typography>
           <Select
             multiple displayEmpty fullWidth value={skills}
@@ -146,7 +152,7 @@ const CrewJoin = () => {
             input={<OutlinedInput />}
             renderValue={(selected) =>
               selected.length === 0 ? (
-                <Typography sx={{ color: "#9aa0a6" }}>Select your skills</Typography>
+                <Typography sx={{ color: "#9aa0a6" }}>Choose how you'll serve</Typography>
               ) : (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {selected.map((s) => (
@@ -202,7 +208,7 @@ const CrewJoin = () => {
           </Select>
         </Box>
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>
-          Complete signup
+          Begin serving
         </Button>
       </Stack>
     </Centered>

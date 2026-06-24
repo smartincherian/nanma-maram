@@ -52,7 +52,7 @@ describe("CrewJoin", () => {
       isAllowed: false, isCrew: false, crew: { id: "old@example.com", active: false }, loading: false,
     });
     renderJoin();
-    expect(screen.getByText(/paused/i)).toBeInTheDocument();
+    expect(screen.getByText(/resting for now/i)).toBeInTheDocument();
   });
 
   it("redirects active crew to the crew home", () => {
@@ -103,7 +103,7 @@ describe("CrewJoin", () => {
       fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: "9876543210" } });
 
       // Open the MUI Select and pick "Shorts"
-      fireEvent.mouseDown(screen.getByText("Select your skills"));
+      fireEvent.mouseDown(screen.getByText("Choose how you'll serve"));
       const option = await screen.findByRole("option", { name: "Shorts" });
       fireEvent.click(option);
 
@@ -111,7 +111,7 @@ describe("CrewJoin", () => {
       fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
 
       // Click submit
-      fireEvent.click(screen.getByRole("button", { name: /complete signup/i }));
+      fireEvent.click(screen.getByRole("button", { name: /begin serving/i }));
 
       await waitFor(() => {
         expect(registerCrew).toHaveBeenCalledWith(
@@ -133,7 +133,7 @@ describe("CrewJoin", () => {
       fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: "9876543210" } });
 
       // Open the MUI Select and pick "Shorts"
-      fireEvent.mouseDown(screen.getByText("Select your skills"));
+      fireEvent.mouseDown(screen.getByText("Choose how you'll serve"));
       const option = await screen.findByRole("option", { name: "Shorts" });
       fireEvent.click(option);
 
@@ -141,7 +141,7 @@ describe("CrewJoin", () => {
       fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
 
       // Click submit
-      fireEvent.click(screen.getByRole("button", { name: /complete signup/i }));
+      fireEvent.click(screen.getByRole("button", { name: /begin serving/i }));
 
       // Wait for the rejection to propagate and snackbar to be called
       await waitFor(() => {
@@ -157,7 +157,7 @@ describe("CrewJoin", () => {
       renderJoin();
 
       // Pick "Shorts" — its chip (with a remove control) appears in the field
-      fireEvent.mouseDown(screen.getByText("Select your skills"));
+      fireEvent.mouseDown(screen.getByText("Choose how you'll serve"));
       fireEvent.click(await screen.findByRole("option", { name: "Shorts" }));
       const removeBtn = await screen.findByLabelText("Remove Shorts");
 

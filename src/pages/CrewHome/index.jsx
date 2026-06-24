@@ -34,8 +34,14 @@ const CrewHome = () => {
         <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={2}>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13" }}>
+              <Typography variant="overline" sx={{ color: "#935100", fontWeight: 700, letterSpacing: 1 }}>
+                Welcome, fellow servant
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13", mt: -1 }}>
                 {crew?.name}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
+                Thank you for serving Jesus with your gifts. 🙏
               </Typography>
               <Typography sx={{ color: "#5b6472" }}>{crew?.email}</Typography>
               <Typography sx={{ color: "#5b6472" }}>{crew?.phone}</Typography>
@@ -46,7 +52,7 @@ const CrewHome = () => {
               </Box>
               <Divider />
               <Typography sx={{ color: "#8a6a36", fontWeight: 600 }}>
-                Availability & your work list — coming soon.
+                Your availability & the works entrusted to you — coming soon.
               </Typography>
               <Button
                 variant="outlined" startIcon={<LogoutRoundedIcon />}
