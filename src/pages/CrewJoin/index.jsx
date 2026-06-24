@@ -19,7 +19,7 @@ const pageSx = {
   minHeight: "100vh",
   display: "flex",
   alignItems: "center",
-  py: { xs: 4, sm: 6 },
+  py: { xs: 2.5, sm: 5 },
   background:
     "radial-gradient(circle at top, rgba(255, 232, 208, 0.95) 0%, rgba(255, 247, 236, 0.96) 34%, #fffdf8 100%)",
 };
@@ -28,7 +28,7 @@ const Centered = ({ children }) => (
   <Box sx={pageSx}>
     <Container maxWidth="sm">
       <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
-        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>{children}</CardContent>
+        <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>{children}</CardContent>
       </Card>
     </Container>
   </Box>
@@ -119,12 +119,9 @@ const CrewJoin = () => {
 
   return (
     <Centered>
-      <Stack spacing={2.5}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13" }}>
-          Offer your gifts for His glory
-        </Typography>
-        <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
-          “Serve the Lord with gladness; come into his presence with singing.” — Psalm 100:2
+      <Stack spacing={1.75}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: "#3b2a13", lineHeight: 1.3 }}>
+          Offer your gifts for His glory and serve the Lord with gladness.
         </Typography>
         {isAllowed ? (
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ flexWrap: "wrap", gap: 1 }}>
@@ -136,18 +133,18 @@ const CrewJoin = () => {
             </Button>
           </Stack>
         ) : null}
-        <TextField label="Name" value={user.displayName || ""} fullWidth InputProps={{ readOnly: true }} />
-        <TextField label="Email" value={user.email || ""} fullWidth InputProps={{ readOnly: true }} />
+        <TextField label="Name" value={user.displayName || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
+        <TextField label="Email" value={user.email || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
         <TextField
           label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)}
-          fullWidth required placeholder="A number we can reach you on"
+          fullWidth size="small" required placeholder="A number we can reach you on"
         />
         <Box>
-          <Typography variant="body2" sx={{ color: "#5b6472", fontWeight: 600, mb: 0.75 }}>
+          <Typography variant="body2" sx={{ color: "#5b6472", fontWeight: 600, mb: 0.5 }}>
             How you'd like to serve
           </Typography>
           <Select
-            multiple displayEmpty fullWidth value={skills}
+            multiple displayEmpty fullWidth size="small" value={skills}
             onChange={(e) => setSkills(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
             input={<OutlinedInput />}
             renderValue={(selected) =>
