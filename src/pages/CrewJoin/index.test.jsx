@@ -64,17 +64,16 @@ describe("CrewJoin", () => {
     expect(screen.queryByLabelText(/phone/i)).not.toBeInTheDocument();
   });
 
-  it("lets an admin (not yet crew) register, keeping a link to /videos", () => {
+  it("lets an admin (not yet crew) register via the plain register form", () => {
     useAuth.mockReturnValue({
       user: { displayName: "Admin User", email: "admin@example.com" },
       isAllowed: true, isCrew: false, crew: null, loading: false,
     });
     renderJoin();
-    // Admins fall through to the register form...
+    // Admins fall through to the same register form as anyone else.
     expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
-    // ...with a note and an escape hatch back to Videos.
-    expect(screen.getByText(/keeps your video access/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /go to videos/i })).toHaveAttribute("href", "/videos");
+    expect(screen.queryByText(/keeps your video access/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /go to videos/i })).not.toBeInTheDocument();
   });
 
   it("shows a spinner and hides the form while loading", () => {
@@ -111,7 +110,7 @@ describe("CrewJoin", () => {
       fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
 
       // Click submit
-      fireEvent.click(screen.getByRole("button", { name: /work for jesus/i }));
+      fireEvent.click(screen.getByRole("button", { name: /serve for jesus/i }));
 
       await waitFor(() => {
         expect(registerCrew).toHaveBeenCalledWith(
@@ -141,7 +140,7 @@ describe("CrewJoin", () => {
       fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
 
       // Click submit
-      fireEvent.click(screen.getByRole("button", { name: /work for jesus/i }));
+      fireEvent.click(screen.getByRole("button", { name: /serve for jesus/i }));
 
       // Wait for the rejection to propagate and snackbar to be called
       await waitFor(() => {

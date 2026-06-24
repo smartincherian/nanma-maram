@@ -1,6 +1,6 @@
 // src/pages/CrewJoin/index.jsx
 import React, { useContext, useState } from "react";
-import { Navigate, Link as RouterLink } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import {
   Box, Button, Card, CardContent, Chip, CircularProgress, Container,
   MenuItem, OutlinedInput, Select, Stack, TextField, Typography,
@@ -35,7 +35,7 @@ const Centered = ({ children }) => (
 );
 
 const CrewJoin = () => {
-  const { user, isAllowed, isCrew, crew, loading } = useAuth();
+  const { user, isCrew, crew, loading } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
   const [phone, setPhone] = useState("");
   const [skills, setSkills] = useState([]);
@@ -123,16 +123,6 @@ const CrewJoin = () => {
         <Typography variant="h6" sx={{ fontWeight: 800, color: "#3b2a13", lineHeight: 1.3 }}>
           Offer your gifts for His glory
         </Typography>
-        {isAllowed ? (
-          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ flexWrap: "wrap", gap: 1 }}>
-            <Typography variant="body2" sx={{ color: "#5b6472" }}>
-              You're an admin — serving as crew keeps your video access.
-            </Typography>
-            <Button component={RouterLink} to="/videos" size="small" sx={{ textTransform: "none", fontWeight: 700, color: "#935100" }}>
-              Go to Videos
-            </Button>
-          </Stack>
-        ) : null}
         <TextField label="Name" value={user.displayName || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
         <TextField label="Email" value={user.email || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
         <TextField
@@ -205,7 +195,7 @@ const CrewJoin = () => {
           </Select>
         </Box>
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>
-          I'll work for Jesus
+          I'll serve for Jesus
         </Button>
         <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic", textAlign: "center" }}>
           “Serve the Lord with gladness; come into his presence with singing.” — Psalm 100:2
