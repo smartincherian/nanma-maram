@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { signInWithGoogle } from "../../firebase/auth";
 import { registerCrew } from "../../firebase/video/crew";
@@ -154,11 +155,22 @@ const CrewJoin = () => {
                       label={s}
                       size="small"
                       icon={<CheckRoundedIcon />}
+                      onDelete={() => setSkills((prev) => prev.filter((x) => x !== s))}
+                      deleteIcon={
+                        <CancelRoundedIcon
+                          aria-label={`Remove ${s}`}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        />
+                      }
                       sx={{
                         backgroundColor: "rgba(46, 125, 50, 0.12)",
                         color: "#2e7d32",
                         fontWeight: 600,
                         "& .MuiChip-icon": { color: "#2e7d32" },
+                        "& .MuiChip-deleteIcon": {
+                          color: "#2e7d32",
+                          "&:hover": { color: "#1b5e20" },
+                        },
                       }}
                     />
                   ))}

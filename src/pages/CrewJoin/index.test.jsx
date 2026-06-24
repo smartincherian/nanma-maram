@@ -151,5 +151,21 @@ describe("CrewJoin", () => {
       // Form should still be visible (not navigated away)
       expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
     });
+
+    it("removes a selected skill via its chip delete button", async () => {
+      useAuth.mockReturnValue(signedInNonCrew);
+      renderJoin();
+
+      // Pick "Shorts" — its chip (with a remove control) appears in the field
+      fireEvent.mouseDown(screen.getByText("Select your skills"));
+      fireEvent.click(await screen.findByRole("option", { name: "Shorts" }));
+      const removeBtn = await screen.findByLabelText("Remove Shorts");
+
+      // Clicking the chip's delete icon removes the skill from the selection
+      fireEvent.click(removeBtn);
+      await waitFor(() =>
+        expect(screen.queryByLabelText("Remove Shorts")).not.toBeInTheDocument()
+      );
+    });
   });
 });
