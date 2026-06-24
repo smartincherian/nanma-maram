@@ -1,11 +1,15 @@
-import React from "react";
-import { Navigate } from "react-router-dom";
+import React, { useContext, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
-  Box, Button, Card, CardContent, Chip, CircularProgress, Container, Divider, Stack, Typography,
+  Avatar, Box, Card, CardContent, Chip, CircularProgress, Container, Divider,
+  FormControlLabel, IconButton, Menu, MenuItem, Stack, Switch, Typography,
 } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { signOutUser } from "../../firebase/auth";
+import { setCrewAvailability } from "../../firebase/video/crew";
+import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
 import { cardSx } from "../Videos/ui";
 
 const pageSx = {
@@ -16,7 +20,17 @@ const pageSx = {
 };
 
 const CrewHome = () => {
-  const { crew, isCrew, loading } = useAuth();
+  const { user, crew, isCrew, loading, refreshCrew } = useAuth();
+  const { showSnackbar } = useContext(SnackbarContext);
+  const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [available, setAvailable] = useState(crew?.available !== false);
+  const [savingAvailability, setSavingAvailability] = useState(false);
+
+  // No work-assignment system exists yet; this stays false so the availability
+  // toggle is always shown. Once works are assigned, set this from the
+  // member's open assignments to hide the toggle while they have work.
+  const hasAssignedWork = false;
 
   if (loading) {
     return (
@@ -28,43 +42,99 @@ const CrewHome = () => {
 
   if (!isCrew) return <Navigate to="/crew/join" replace />;
 
+  const toggleAvailability = async () => {
+    const next = !available;
+    setAvailable(next);
+    setSavingAvailability(true);
+    try {
+      await setCrewAvailability(crew.id, next);
+      await refreshCrew();
+    } catch (e) {
+      setAvailable(!next);
+      showSnackbar("Could not update availability.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+    } finally {
+      setSavingAvailability(false);
+    }
+  };
+
   return (
     <Box sx={pageSx}>
       <Container maxWidth="sm">
         <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={2}>
-              <Box sx={{ textAlign: "center" }}>
-                <img
-                  src="/images/logo.jpg"
-                  alt="Nanma Maram"
-                  style={{ maxWidth: "100%", height: "auto", maxHeight: "120px" }}
-                />
-              </Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13", lineHeight: 1.3 }}>
-                Welcome, {crew?.name}, Jesus Loves You
-              </Typography>
-              <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
-                Thank you for serving Jesus with your gifts. 🙏
-              </Typography>
-              <Typography sx={{ color: "#5b6472" }}>{crew?.email}</Typography>
-              <Typography sx={{ color: "#5b6472" }}>{crew?.phone}</Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#3b2a13", lineHeight: 1.3 }}>
+                  Welcome, {crew?.name}, Jesus Loves You
+                </Typography>
+                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Account menu" sx={{ p: 0.5 }}>
+                  <Avatar src={user?.photoURL || undefined} alt={crew?.name} sx={{ width: 40, height: 40 }}>
+                    {crew?.name?.[0]?.toUpperCase()}
+                  </Avatar>
+                </IconButton>
+                <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+                  <MenuItem
+                    onClick={() => { setAnchorEl(null); navigate("/crew/profile"); }}
+                  >
+                    <PersonRoundedIcon fontSize="small" sx={{ mr: 1, color: "#935100" }} /> Profile
+                  </MenuItem>
+                  <MenuItem onClick={() => { setAnchorEl(null); signOutUser(); }}>
+                    <LogoutRoundedIcon fontSize="small" sx={{ mr: 1, color: "#b3261e" }} /> Logout
+                  </MenuItem>
+                </Menu>
+              </Stack>
+
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
                 {(crew?.skills || []).map((s) => (
                   <Chip key={s} label={s} size="small" sx={{ backgroundColor: "rgba(147,81,0,0.10)", color: "#935100" }} />
                 ))}
               </Box>
+
               <Divider />
-              <Typography sx={{ color: "#8a6a36", fontWeight: 600 }}>
-                Your availability & the works entrusted to you — coming soon.
-              </Typography>
-              <Button
-                variant="outlined" startIcon={<LogoutRoundedIcon />}
-                onClick={() => signOutUser()}
-                sx={{ textTransform: "none", fontWeight: 700, alignSelf: "flex-start" }}
-              >
-                Sign out
-              </Button>
+
+              {!hasAssignedWork ? (
+                <Box>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                    <Box>
+                      <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>Availability</Typography>
+                      <Typography variant="body2" sx={{ color: "#5b6472" }}>
+                        {available ? "You're available for new work." : "You're marked as not available."}
+                      </Typography>
+                    </Box>
+                    <FormControlLabel
+                      sx={{ mr: 0 }}
+                      control={
+                        <Switch
+                          checked={available}
+                          onChange={toggleAvailability}
+                          disabled={savingAvailability}
+                          color="success"
+                        />
+                      }
+                      label={
+                        <Chip
+                          size="small"
+                          label={available ? "Available" : "Not available"}
+                          sx={{
+                            fontWeight: 700,
+                            backgroundColor: available ? "rgba(46,125,50,0.14)" : "rgba(91,100,114,0.14)",
+                            color: available ? "#2e7d32" : "#5b6472",
+                          }}
+                        />
+                      }
+                    />
+                  </Stack>
+                </Box>
+              ) : null}
+
+              <Divider />
+
+              <Box>
+                <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>Your works</Typography>
+                <Typography variant="body2" sx={{ color: "#8a6a36" }}>
+                  No works assigned yet — your pending works will appear here. (Coming soon)
+                </Typography>
+              </Box>
             </Stack>
           </CardContent>
         </Card>

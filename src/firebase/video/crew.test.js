@@ -1,5 +1,13 @@
 import { addDoc, collection, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { addCrew, fetchCrewByEmail, registerCrew, setCrewActive, updateCrew } from "./crew";
+import {
+  addCrew,
+  fetchCrewByEmail,
+  registerCrew,
+  setCrewActive,
+  setCrewAvailability,
+  updateCrew,
+  updateCrewProfile,
+} from "./crew";
 
 jest.mock("firebase/firestore", () => ({
   addDoc: jest.fn(),
@@ -132,6 +140,39 @@ describe("crew accounts", () => {
       });
       const written = updateDoc.mock.calls[0][1];
       expect(written).not.toHaveProperty("linkedEmail");
+    });
+  });
+
+  describe("setCrewAvailability", () => {
+    it("updates only the available flag", async () => {
+      await setCrewAvailability("person@example.com", false);
+      expect(doc).toHaveBeenCalledWith({ __db: true }, "videoCrew", "person@example.com");
+      expect(updateDoc).toHaveBeenCalledWith("crewRef", { available: false });
+    });
+  });
+
+  describe("updateCrewProfile", () => {
+    it("updates only name/phone/skills (no email/active/createdAt)", async () => {
+      await updateCrewProfile("person@example.com", {
+        name: "  New Name  ",
+        phone: "  555  ",
+        skills: ["Promo", "Caption"],
+      });
+      expect(updateDoc).toHaveBeenCalledWith("crewRef", {
+        name: "New Name",
+        phone: "555",
+        skills: ["Promo", "Caption"],
+      });
+      const written = updateDoc.mock.calls[0][1];
+      expect(written).not.toHaveProperty("email");
+      expect(written).not.toHaveProperty("active");
+    });
+
+    it("throws when name, phone, or skills are missing", async () => {
+      await expect(updateCrewProfile("id", { name: " ", phone: "1", skills: ["Shorts"] })).rejects.toThrow();
+      await expect(updateCrewProfile("id", { name: "A", phone: " ", skills: ["Shorts"] })).rejects.toThrow();
+      await expect(updateCrewProfile("id", { name: "A", phone: "1", skills: [] })).rejects.toThrow();
+      expect(updateDoc).not.toHaveBeenCalled();
     });
   });
 });

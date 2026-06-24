@@ -64,8 +64,17 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
+  // Re-reads the crew record (e.g. after a profile edit or availability
+  // change) so the UI reflects the latest without a full sign-in cycle.
+  const refreshCrew = async () => {
+    if (!user?.email) return;
+    const crewRecord = await fetchCrewByEmail(user.email);
+    setCrew(crewRecord);
+    setIsCrew(crewRecord !== null && crewRecord.active !== false);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAllowed, isOwner, crew, isCrew, loading }}>
+    <AuthContext.Provider value={{ user, isAllowed, isOwner, crew, isCrew, loading, refreshCrew }}>
       {children}
     </AuthContext.Provider>
   );

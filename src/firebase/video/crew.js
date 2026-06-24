@@ -84,3 +84,24 @@ export const registerCrew = async ({ email, name, phone, skills }) => {
 export const setCrewActive = async (id, active) => {
   await updateDoc(doc(DB, CREW, id), { active });
 };
+
+// Crew member's own availability, used when no work is assigned to them.
+export const setCrewAvailability = async (id, available) => {
+  await updateDoc(doc(DB, CREW, id), { available });
+};
+
+// Self-service profile edit — updates only name/phone/skills, leaving
+// email, active, available, and createdAt untouched.
+export const updateCrewProfile = async (id, { name, phone, skills }) => {
+  const cleanName = (name || "").trim();
+  const cleanPhone = (phone || "").trim();
+  const cleanSkills = Array.isArray(skills) ? skills : [];
+  if (!cleanName) throw new Error("Name is required.");
+  if (!cleanPhone) throw new Error("Phone number is required.");
+  if (cleanSkills.length === 0) throw new Error("Pick at least one skill.");
+  await updateDoc(doc(DB, CREW, id), {
+    name: cleanName,
+    phone: cleanPhone,
+    skills: cleanSkills,
+  });
+};

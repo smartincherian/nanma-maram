@@ -23,6 +23,7 @@ import VideoDetail from "./pages/Videos/VideoDetail";
 import VideoConfig from "./pages/VideoConfig";
 import CrewJoin from "./pages/CrewJoin";
 import CrewHome from "./pages/CrewHome";
+import CrewProfile from "./pages/CrewProfile";
 
 function App() {
   return (
@@ -104,6 +105,7 @@ function App() {
             }
           />
           <Route path="/crew/join" element={<CrewJoin />} />
+          <Route path="/crew/profile" element={<CrewProfile />} />
           <Route path="/crew" element={<CrewHome />} />
           <Route
             path="/admins"

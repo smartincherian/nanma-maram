@@ -2,16 +2,14 @@
 import React, { useContext, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
-  Box, Button, Card, CardContent, Chip, CircularProgress, Container,
-  MenuItem, OutlinedInput, Select, Stack, TextField, Typography,
+  Box, Button, Card, CardContent, CircularProgress, Container,
+  Stack, TextField, Typography,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { signInWithGoogle } from "../../firebase/auth";
 import { registerCrew } from "../../firebase/video/crew";
-import { CREW_SKILLS } from "../../utils/crewSkills";
+import SkillsSelect from "../../components/SkillsSelect";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
@@ -129,71 +127,7 @@ const CrewJoin = () => {
           label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)}
           fullWidth size="small" required placeholder="A number we can reach you on"
         />
-        <Box>
-          <Typography variant="body2" sx={{ color: "#5b6472", fontWeight: 600, mb: 0.5 }}>
-            How you'd like to serve
-          </Typography>
-          <Select
-            multiple displayEmpty fullWidth size="small" value={skills}
-            onChange={(e) => setSkills(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
-            input={<OutlinedInput />}
-            renderValue={(selected) =>
-              selected.length === 0 ? (
-                <Typography sx={{ color: "#9aa0a6" }}>Choose how you'll serve</Typography>
-              ) : (
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                  {selected.map((s) => (
-                    <Chip
-                      key={s}
-                      label={s}
-                      size="small"
-                      onDelete={() => setSkills((prev) => prev.filter((x) => x !== s))}
-                      deleteIcon={
-                        <CancelRoundedIcon
-                          aria-label={`Remove ${s}`}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        />
-                      }
-                      sx={{
-                        backgroundColor: "rgba(46, 125, 50, 0.12)",
-                        color: "#2e7d32",
-                        fontWeight: 600,
-                        "& .MuiChip-deleteIcon": {
-                          color: "#2e7d32",
-                          "&:hover": { color: "#1b5e20" },
-                        },
-                      }}
-                    />
-                  ))}
-                </Box>
-              )
-            }
-          >
-            {CREW_SKILLS.map((skill) => {
-              const checked = skills.includes(skill);
-              return (
-                <MenuItem
-                  key={skill}
-                  value={skill}
-                  sx={{
-                    borderRadius: 1.5,
-                    mx: 0.5,
-                    my: 0.25,
-                    "&.Mui-selected": { backgroundColor: "rgba(46, 125, 50, 0.10)" },
-                    "&.Mui-selected:hover": { backgroundColor: "rgba(46, 125, 50, 0.16)" },
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 1 }}>
-                    <Typography sx={{ fontWeight: checked ? 700 : 400, color: checked ? "#2e7d32" : "#3b2a13" }}>
-                      {skill}
-                    </Typography>
-                    {checked ? <CheckRoundedIcon fontSize="small" sx={{ color: "#2e7d32" }} /> : null}
-                  </Box>
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </Box>
+        <SkillsSelect value={skills} onChange={setSkills} />
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>
           I'll serve for Jesus
         </Button>
