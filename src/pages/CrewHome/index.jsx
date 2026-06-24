@@ -6,11 +6,12 @@ import {
 } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import AssignmentRoundedIcon from "@mui/icons-material/AssignmentRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { signOutUser } from "../../firebase/auth";
 import { setCrewAvailability } from "../../firebase/video/crew";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
-import MandalaDivider, { CrewWatermark } from "../../components/MandalaDivider";
+import { ZentangleStrip, CrewWatermark } from "../../components/Zentangle";
 import { cardSx } from "../Videos/ui";
 
 const eyebrowSx = {
@@ -20,6 +21,21 @@ const eyebrowSx = {
   color: "#935100",
   textTransform: "uppercase",
   fontSize: "0.72rem",
+};
+
+const tileSx = {
+  borderRadius: 3,
+  border: "1px solid rgba(160, 103, 38, 0.18)",
+  backgroundColor: "rgba(255, 252, 247, 0.55)",
+  p: { xs: 1.75, sm: 2 },
+};
+
+const heroSx = {
+  borderRadius: 3,
+  overflow: "hidden",
+  border: "1.5px solid rgba(147, 81, 0, 0.3)",
+  background: "linear-gradient(180deg, rgba(255,250,242,0.96) 0%, rgba(255,243,228,0.96) 100%)",
+  boxShadow: "0 12px 30px rgba(147, 81, 0, 0.1)",
 };
 
 const pageSx = {
@@ -95,10 +111,10 @@ const CrewHome = () => {
                 </Menu>
               </Stack>
 
-              <MandalaDivider sx={{ my: 0.5 }} />
+              <ZentangleStrip height={16} sx={{ opacity: 0.7 }} />
 
               {!hasAssignedWork ? (
-                <Box>
+                <Box sx={tileSx}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                     <Box>
                       <Typography variant="overline" sx={eyebrowSx}>Availability</Typography>
@@ -132,13 +148,19 @@ const CrewHome = () => {
                 </Box>
               ) : null}
 
-              <MandalaDivider sx={{ my: 0.5 }} />
-
-              <Box>
-                <Typography variant="overline" sx={eyebrowSx}>Your works</Typography>
-                <Typography variant="body2" sx={{ color: "#8a6a36", mt: 0.25 }}>
-                  No works assigned yet — your pending works will appear here. (Coming soon)
-                </Typography>
+              <Box sx={heroSx}>
+                <ZentangleStrip height={14} sx={{ opacity: 0.6 }} />
+                <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <AssignmentRoundedIcon sx={{ color: "#935100" }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#3b2a13", letterSpacing: "0.04em" }}>
+                      Your works
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" sx={{ color: "#8a6a36", mt: 1 }}>
+                    No works assigned yet — your pending works will appear here. (Coming soon)
+                  </Typography>
+                </Box>
               </Box>
             </Stack>
           </CardContent>

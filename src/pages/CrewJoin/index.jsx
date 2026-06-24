@@ -11,7 +11,7 @@ import { signInWithGoogle } from "../../firebase/auth";
 import { registerCrew } from "../../firebase/video/crew";
 import SkillsSelect from "../../components/SkillsSelect";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
-import { CrewWatermark } from "../../components/MandalaDivider";
+import { CrewWatermark } from "../../components/Zentangle";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
 const pageSx = {
