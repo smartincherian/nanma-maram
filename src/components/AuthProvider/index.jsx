@@ -7,11 +7,14 @@ import React, {
 import { onAuthStateChanged } from "firebase/auth";
 import { AUTH } from "../../config/firebase";
 import { fetchAdmin } from "../../firebase/auth";
+import { fetchCrewByEmail } from "../../firebase/video/crew";
 
 const AuthContext = createContext({
   user: null,
   isAllowed: false,
   isOwner: false,
+  crew: null,
+  isCrew: false,
   loading: true,
 });
 
@@ -21,6 +24,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAllowed, setIsAllowed] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [crew, setCrew] = useState(null);
+  const [isCrew, setIsCrew] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,18 +35,27 @@ export const AuthProvider = ({ children }) => {
       if (!nextUser) {
         setIsAllowed(false);
         setIsOwner(false);
+        setCrew(null);
+        setIsCrew(false);
         setLoading(false);
         return;
       }
 
       try {
-        const admin = await fetchAdmin(nextUser.email);
+        const [admin, crewRecord] = await Promise.all([
+          fetchAdmin(nextUser.email),
+          fetchCrewByEmail(nextUser.email),
+        ]);
         setIsAllowed(admin !== null);
         setIsOwner(admin?.role === "owner");
+        setCrew(crewRecord);
+        setIsCrew(crewRecord !== null && crewRecord.active !== false);
       } catch (error) {
-        console.error("fetchAdmin :", error);
+        console.error("auth lookup :", error);
         setIsAllowed(false);
         setIsOwner(false);
+        setCrew(null);
+        setIsCrew(false);
       } finally {
         setLoading(false);
       }
@@ -51,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAllowed, isOwner, loading }}>
+    <AuthContext.Provider value={{ user, isAllowed, isOwner, crew, isCrew, loading }}>
       {children}
     </AuthContext.Provider>
   );
