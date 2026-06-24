@@ -21,6 +21,8 @@ import VideosDashboard from "./pages/Videos";
 import VideoForm from "./pages/Videos/VideoForm";
 import VideoDetail from "./pages/Videos/VideoDetail";
 import VideoConfig from "./pages/VideoConfig";
+import CrewJoin from "./pages/CrewJoin";
+import CrewHome from "./pages/CrewHome";
 
 function App() {
   return (
@@ -101,6 +103,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/crew/join" element={<CrewJoin />} />
+          <Route path="/crew" element={<CrewHome />} />
           <Route
             path="/admins"
             element={
