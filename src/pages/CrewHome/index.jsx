@@ -63,8 +63,8 @@ const CrewHome = () => {
         <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={2}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                <Typography variant="body2" noWrap sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0 }}>
+              <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+                <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0, mt: 0.5 }}>
                   Welcome, {crew?.name}, Jesus Loves You
                 </Typography>
                 <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Account menu" sx={{ p: 0.5 }}>
