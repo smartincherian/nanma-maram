@@ -34,6 +34,13 @@ const CrewHome = () => {
         <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={2}>
+              <Box sx={{ textAlign: "center" }}>
+                <img
+                  src="/images/logo.jpg"
+                  alt="Nanma Maram"
+                  style={{ maxWidth: "100%", height: "auto", maxHeight: "120px" }}
+                />
+              </Box>
               <Typography variant="overline" sx={{ color: "#935100", fontWeight: 700, letterSpacing: 1 }}>
                 Welcome, fellow servant
               </Typography>
