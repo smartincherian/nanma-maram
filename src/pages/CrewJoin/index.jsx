@@ -1,6 +1,6 @@
 // src/pages/CrewJoin/index.jsx
 import React, { useContext, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
   Box, Button, Card, CardContent, CircularProgress, Container,
   Stack, TextField, Typography,
@@ -11,6 +11,7 @@ import { signInWithGoogle } from "../../firebase/auth";
 import { registerCrew } from "../../firebase/video/crew";
 import SkillsSelect from "../../components/SkillsSelect";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
+import ChapelFooter from "../../components/ChapelFooter";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
 const pageSx = {
@@ -28,13 +29,15 @@ const Centered = ({ children }) => (
       <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
         <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>{children}</CardContent>
       </Card>
+      <ChapelFooter />
     </Container>
   </Box>
 );
 
 const CrewJoin = () => {
-  const { user, isCrew, crew, loading } = useAuth();
+  const { user, isCrew, crew, loading, refreshCrew } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
+  const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [skills, setSkills] = useState([]);
   const [signingIn, setSigningIn] = useState(false);
@@ -105,8 +108,12 @@ const CrewJoin = () => {
         phone,
         skills,
       });
+      if (refreshCrew) {
+        await refreshCrew();
+      }
       showSnackbar("Welcome to the ministry! May God bless your service. 🙏", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
       setRegistered(true);
+      navigate("/crew", { replace: true });
     } catch (e) {
       showSnackbar(e?.message || "Something went wrong. Please try again.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       setSaving(false);

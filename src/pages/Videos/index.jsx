@@ -17,6 +17,7 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
+import ChapelFooter from "../../components/ChapelFooter";
 import { listVideos } from "../../firebase/video/videos";
 import { amberButtonSx } from "./ui";
 import VideoCard from "./components/VideoCard";
@@ -94,6 +95,8 @@ const VideosDashboard = () => {
       >
         New
       </Button>
+
+      <ChapelFooter />
     </Container>
   );
 };

@@ -24,6 +24,7 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { addCrew, deleteCrew, listCrew, setCrewActive, updateCrew } from "../../firebase/video/crew";
+import { getCrewSkillLabel } from "../../utils/crewSkills";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
 const EMPTY = { name: "", active: true };
@@ -122,7 +123,7 @@ const CrewTab = () => {
               {(member.skills || []).length > 0 ? (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>
                   {member.skills.map((s) => (
-                    <Chip key={s} size="small" label={s} sx={{ backgroundColor: "rgba(147,81,0,0.10)", color: "#935100" }} />
+                    <Chip key={s} size="small" label={getCrewSkillLabel(s)} sx={{ backgroundColor: "rgba(147,81,0,0.10)", color: "#935100" }} />
                   ))}
                 </Box>
               ) : null}

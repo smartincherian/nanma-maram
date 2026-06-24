@@ -1,11 +1,40 @@
-// The fixed set of skills a crew member can declare at signup. Single source
-// of truth — referenced by the register form. Order here is the display order.
-export const CREW_SKILLS = [
-  "Shorts",
-  "Long",
-  "Promo",
-  "Thumbnail",
-  "Caption",
-  "Before editing content checking",
-  "After editing content checking",
+// The fixed set of skills a crew member can declare at signup/profile edit.
+// Store `value` in Firestore; render `label` in the UI.
+export const CREW_SKILL_GROUPS = [
+  {
+    label: "Video editing",
+    skills: [
+      { value: "shorts_video_editing", label: "Shorts" },
+      { value: "long_video_editing", label: "Long" },
+      { value: "promo_video_editing", label: "Promo" },
+    ],
+  },
+  {
+    label: "Video assets",
+    skills: [
+      { value: "thumbnail_video", label: "Thumbnail" },
+      { value: "caption_video", label: "Caption" },
+    ],
+  },
+  {
+    label: "Checking",
+    skills: [
+      { value: "before_editing_content_checking", label: "Before editing content checking" },
+      { value: "after_editing_content_checking", label: "After editing content checking" },
+    ],
+  },
+  {
+    label: "Design and text",
+    skills: [
+      { value: "poster", label: "Poster" },
+      { value: "video_descriptions", label: "Video descriptions" },
+    ],
+  },
 ];
+
+export const CREW_SKILLS = CREW_SKILL_GROUPS.flatMap((group) => group.skills);
+
+export const getCrewSkillLabel = (value) => {
+  const skill = CREW_SKILLS.find((item) => item.value === value);
+  return skill?.label || value;
+};

@@ -3,6 +3,7 @@ import { Box, Button, Container, Paper, Stack, Tab, Tabs, Typography } from "@mu
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../components/AuthProvider";
+import ChapelFooter from "../../components/ChapelFooter";
 import StagesTab from "./StagesTab";
 import CrewTab from "./CrewTab";
 
@@ -60,6 +61,8 @@ const VideoConfig = () => {
       </Box>
 
       {tab === 0 ? <StagesTab /> : <CrewTab />}
+
+      <ChapelFooter />
     </Container>
   );
 };

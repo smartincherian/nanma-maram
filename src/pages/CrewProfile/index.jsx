@@ -7,6 +7,7 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { updateCrewProfile } from "../../firebase/video/crew";
 import SkillsSelect from "../../components/SkillsSelect";
+import ChapelFooter from "../../components/ChapelFooter";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
@@ -86,6 +87,7 @@ const CrewProfile = () => {
             </Stack>
           </CardContent>
         </Card>
+        <ChapelFooter />
       </Container>
     </Box>
   );

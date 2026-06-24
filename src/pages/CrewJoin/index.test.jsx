@@ -117,7 +117,7 @@ describe("CrewJoin", () => {
           expect.objectContaining({
             email: "test@example.com",
             phone: "9876543210",
-            skills: ["Shorts"],
+            skills: ["shorts_video_editing"],
           })
         );
       });

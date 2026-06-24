@@ -14,6 +14,7 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
+import ChapelFooter from "../../components/ChapelFooter";
 import { listStages } from "../../firebase/video/stages";
 import { addVideo, getVideo, updateVideoMeta } from "../../firebase/video/videos";
 import { buildStagesFromList } from "../../utils/videoWorkflow";
@@ -113,6 +114,7 @@ const VideoForm = () => {
           </Button>
         </Stack>
       </Paper>
+      <ChapelFooter />
     </Container>
   );
 };

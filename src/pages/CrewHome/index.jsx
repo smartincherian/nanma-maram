@@ -11,6 +11,7 @@ import { useAuth } from "../../components/AuthProvider";
 import { signOutUser } from "../../firebase/auth";
 import { setCrewAvailability } from "../../firebase/video/crew";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
+import ChapelFooter from "../../components/ChapelFooter";
 import { cardSx } from "../Videos/ui";
 
 const eyebrowSx = {
@@ -24,7 +25,7 @@ const eyebrowSx = {
 
 const sectionSx = { ...cardSx, borderRadius: { xs: 3, sm: 4 } };
 
-const availabilitySx = { ...cardSx, borderRadius: { xs: 3, sm: 4 }, py: 1.25 };
+const availabilitySx = { ...cardSx, borderRadius: { xs: 3, sm: 4 }, py: 1 };
 
 const heroSx = {
   ...cardSx,
@@ -35,8 +36,9 @@ const heroSx = {
 };
 
 const pageSx = {
-  minHeight: "100vh",
-  py: { xs: 4, sm: 6 },
+  minHeight: "100svh",
+  pt: { xs: 3, sm: 6 },
+  pb: { xs: "calc(88px + env(safe-area-inset-bottom))", sm: 6 },
   background:
     "radial-gradient(circle at top, rgba(255, 232, 208, 0.95) 0%, rgba(255, 247, 236, 0.96) 34%, #fffdf8 100%)",
 };
@@ -108,11 +110,11 @@ const CrewHome = () => {
           {/* Section 2 — availability (only when no work is assigned) */}
           {!hasAssignedWork ? (
             <Paper elevation={0} sx={availabilitySx}>
-              <Typography variant="overline" sx={eyebrowSx}>Availability</Typography>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 0.25 }}>
-                <Typography variant="body2" sx={{ color: "#5b6472" }}>
-                  {available ? "You're available for new work." : "You're marked as not available."}
-                </Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="overline" sx={{ ...eyebrowSx, lineHeight: 1.2 }}>Availability</Typography>
+                  
+                </Box>
                 <FormControlLabel
                   sx={{ mr: 0 }}
                   control={
@@ -154,9 +156,10 @@ const CrewHome = () => {
         </Stack>
       </Container>
       <Box sx={{ flexGrow: 1 }} />
-      <Typography variant="caption" sx={{ textAlign: "center", color: "#8a6a36", fontStyle: "italic", pt: 3, pb: 3 }}>
+      <Typography variant="caption" sx={{ textAlign: "center", color: "#8a6a36", fontStyle: "italic", pt: 3 }}>
         Jesus Loves You 🙏
       </Typography>
+      <ChapelFooter />
     </Box>
   );
 };

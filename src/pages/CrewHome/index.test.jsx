@@ -17,7 +17,7 @@ jest.mock("../../components/Snackbar", () => {
 
 const activeCrew = {
   user: { photoURL: "" },
-  crew: { id: "p@example.com", name: "Person", email: "p@example.com", phone: "999", skills: ["Shorts", "Promo"], available: true },
+  crew: { id: "p@example.com", name: "Person", email: "p@example.com", phone: "999", skills: ["shorts_video_editing", "promo_video_editing"], available: true },
   isCrew: true, loading: false, refreshCrew: jest.fn(),
 };
 
@@ -48,7 +48,7 @@ describe("CrewHome", () => {
   it("shows the availability toggle as available by default", () => {
     useAuth.mockReturnValue(activeCrew);
     renderHome();
-    expect(screen.getByText(/you're available for new work/i)).toBeInTheDocument();
+    expect(screen.getByText(/available/i)).toBeInTheDocument();
     expect(screen.getByRole("checkbox")).toBeChecked();
   });
 

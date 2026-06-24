@@ -34,6 +34,7 @@ import {
 import { amberButtonSx, VIDEO_STATUS_META } from "./ui";
 import StageTimeline from "./components/StageTimeline";
 import CrewPicker from "./components/CrewPicker";
+import ChapelFooter from "../../components/ChapelFooter";
 
 const VideoDetail = () => {
   const navigate = useNavigate();
@@ -204,6 +205,8 @@ const VideoDetail = () => {
           <Button variant="contained" color="error" onClick={handleDelete} sx={{ textTransform: "none", fontWeight: 700 }}>Confirm delete</Button>
         </DialogActions>
       </Dialog>
+
+      <ChapelFooter />
     </Container>
   );
 };

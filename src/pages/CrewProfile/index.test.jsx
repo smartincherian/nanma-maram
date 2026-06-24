@@ -17,7 +17,7 @@ jest.mock("../../components/Snackbar", () => {
   };
 });
 
-const crew = { id: "p@example.com", name: "Person", email: "p@example.com", phone: "999", skills: ["Shorts"] };
+const crew = { id: "p@example.com", name: "Person", email: "p@example.com", phone: "999", skills: ["shorts_video_editing"] };
 
 const renderProfile = () =>
   render(
@@ -55,7 +55,7 @@ describe("CrewProfile", () => {
     await waitFor(() => {
       expect(updateCrewProfile).toHaveBeenCalledWith(
         "p@example.com",
-        expect.objectContaining({ name: "Person", phone: "12345", skills: ["Shorts"] })
+        expect.objectContaining({ name: "Person", phone: "12345", skills: ["shorts_video_editing"] })
       );
     });
   });
