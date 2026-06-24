@@ -6,6 +6,7 @@ import {
   MenuItem, OutlinedInput, Select, Stack, TextField, Typography,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import { useAuth } from "../../components/AuthProvider";
 import { signInWithGoogle } from "../../firebase/auth";
 import { registerCrew } from "../../firebase/video/crew";
@@ -134,24 +135,62 @@ const CrewJoin = () => {
           label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)}
           fullWidth required placeholder="Your contact number"
         />
-        <Select
-          multiple displayEmpty value={skills}
-          onChange={(e) => setSkills(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
-          input={<OutlinedInput />}
-          renderValue={(selected) =>
-            selected.length === 0 ? (
-              <Typography sx={{ color: "#9aa0a6" }}>Select your skills</Typography>
-            ) : (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                {selected.map((s) => <Chip key={s} label={s} size="small" />)}
-              </Box>
-            )
-          }
-        >
-          {CREW_SKILLS.map((skill) => (
-            <MenuItem key={skill} value={skill}>{skill}</MenuItem>
-          ))}
-        </Select>
+        <Box>
+          <Typography variant="body2" sx={{ color: "#5b6472", fontWeight: 600, mb: 0.75 }}>
+            Your skills
+          </Typography>
+          <Select
+            multiple displayEmpty fullWidth value={skills}
+            onChange={(e) => setSkills(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
+            input={<OutlinedInput />}
+            renderValue={(selected) =>
+              selected.length === 0 ? (
+                <Typography sx={{ color: "#9aa0a6" }}>Select your skills</Typography>
+              ) : (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                  {selected.map((s) => (
+                    <Chip
+                      key={s}
+                      label={s}
+                      size="small"
+                      icon={<CheckRoundedIcon />}
+                      sx={{
+                        backgroundColor: "rgba(46, 125, 50, 0.12)",
+                        color: "#2e7d32",
+                        fontWeight: 600,
+                        "& .MuiChip-icon": { color: "#2e7d32" },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )
+            }
+          >
+            {CREW_SKILLS.map((skill) => {
+              const checked = skills.includes(skill);
+              return (
+                <MenuItem
+                  key={skill}
+                  value={skill}
+                  sx={{
+                    borderRadius: 1.5,
+                    mx: 0.5,
+                    my: 0.25,
+                    "&.Mui-selected": { backgroundColor: "rgba(46, 125, 50, 0.10)" },
+                    "&.Mui-selected:hover": { backgroundColor: "rgba(46, 125, 50, 0.16)" },
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 1 }}>
+                    <Typography sx={{ fontWeight: checked ? 700 : 400, color: checked ? "#2e7d32" : "#3b2a13" }}>
+                      {skill}
+                    </Typography>
+                    {checked ? <CheckRoundedIcon fontSize="small" sx={{ color: "#2e7d32" }} /> : null}
+                  </Box>
+                </MenuItem>
+              );
+            })}
+          </Select>
+        </Box>
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>
           Complete signup
         </Button>
