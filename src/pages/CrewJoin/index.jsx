@@ -154,7 +154,6 @@ const CrewJoin = () => {
                       key={s}
                       label={s}
                       size="small"
-                      icon={<CheckRoundedIcon />}
                       onDelete={() => setSkills((prev) => prev.filter((x) => x !== s))}
                       deleteIcon={
                         <CancelRoundedIcon
@@ -166,7 +165,6 @@ const CrewJoin = () => {
                         backgroundColor: "rgba(46, 125, 50, 0.12)",
                         color: "#2e7d32",
                         fontWeight: 600,
-                        "& .MuiChip-icon": { color: "#2e7d32" },
                         "& .MuiChip-deleteIcon": {
                           color: "#2e7d32",
                           "&:hover": { color: "#1b5e20" },
