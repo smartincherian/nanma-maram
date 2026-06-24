@@ -124,7 +124,7 @@ const CrewJoin = () => {
           Offer your gifts for His glory
         </Typography>
         <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
-          “Whatever you do, work heartily, as for the Lord.” — Colossians 3:23
+          “Serve the Lord with gladness; come into his presence with singing.” — Psalm 100:2
         </Typography>
         {isAllowed ? (
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ flexWrap: "wrap", gap: 1 }}>
