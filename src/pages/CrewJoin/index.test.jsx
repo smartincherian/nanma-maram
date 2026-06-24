@@ -64,13 +64,16 @@ describe("CrewJoin", () => {
     expect(screen.queryByLabelText(/phone/i)).not.toBeInTheDocument();
   });
 
-  it("shows an admin note and a link to /videos for allowed users", () => {
+  it("lets an admin (not yet crew) register, keeping a link to /videos", () => {
     useAuth.mockReturnValue({
       user: { displayName: "Admin User", email: "admin@example.com" },
       isAllowed: true, isCrew: false, crew: null, loading: false,
     });
     renderJoin();
-    expect(screen.getByText(/admin/i)).toBeInTheDocument();
+    // Admins fall through to the register form...
+    expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
+    // ...with a note and an escape hatch back to Videos.
+    expect(screen.getByText(/keeps your video access/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /go to videos/i })).toHaveAttribute("href", "/videos");
   });
 

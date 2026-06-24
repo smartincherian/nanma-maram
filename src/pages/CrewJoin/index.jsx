@@ -93,21 +93,6 @@ const CrewJoin = () => {
     );
   }
 
-  if (isAllowed) {
-    return (
-      <Centered>
-        <Stack spacing={1.5} textAlign="center">
-          <Typography sx={{ color: "#3b2a13", fontWeight: 700 }}>
-            You're an admin — no need to register as crew.
-          </Typography>
-          <Button component={RouterLink} to="/videos" variant="contained" sx={amberButtonSx}>
-            Go to Videos
-          </Button>
-        </Stack>
-      </Centered>
-    );
-  }
-
   const handleSubmit = async () => {
     setSaving(true);
     try {
@@ -133,6 +118,16 @@ const CrewJoin = () => {
         <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13" }}>
           Register as crew
         </Typography>
+        {isAllowed ? (
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ flexWrap: "wrap", gap: 1 }}>
+            <Typography variant="body2" sx={{ color: "#5b6472" }}>
+              You're an admin — registering as crew keeps your video access.
+            </Typography>
+            <Button component={RouterLink} to="/videos" size="small" sx={{ textTransform: "none", fontWeight: 700, color: "#935100" }}>
+              Go to Videos
+            </Button>
+          </Stack>
+        ) : null}
         <TextField label="Name" value={user.displayName || ""} fullWidth InputProps={{ readOnly: true }} />
         <TextField label="Email" value={user.email || ""} fullWidth InputProps={{ readOnly: true }} />
         <TextField
