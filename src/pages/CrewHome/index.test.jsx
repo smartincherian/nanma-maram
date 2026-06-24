@@ -41,7 +41,6 @@ describe("CrewHome", () => {
     useAuth.mockReturnValue(activeCrew);
     renderHome();
     expect(screen.getByText(/Welcome, Person, Jesus Loves You/i)).toBeInTheDocument();
-    expect(screen.getByText("Shorts")).toBeInTheDocument();
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
   });
 

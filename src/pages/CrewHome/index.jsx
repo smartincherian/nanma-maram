@@ -64,7 +64,7 @@ const CrewHome = () => {
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={2}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#3b2a13", lineHeight: 1.3 }}>
+                <Typography variant="body2" noWrap sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0 }}>
                   Welcome, {crew?.name}, Jesus Loves You
                 </Typography>
                 <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Account menu" sx={{ p: 0.5 }}>
@@ -83,12 +83,6 @@ const CrewHome = () => {
                   </MenuItem>
                 </Menu>
               </Stack>
-
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-                {(crew?.skills || []).map((s) => (
-                  <Chip key={s} label={s} size="small" sx={{ backgroundColor: "rgba(147,81,0,0.10)", color: "#935100" }} />
-                ))}
-              </Box>
 
               <Divider />
 
