@@ -60,4 +60,21 @@ describe("CrewJoin", () => {
     renderJoin();
     expect(screen.queryByLabelText(/phone/i)).not.toBeInTheDocument();
   });
+
+  it("shows an admin note and a link to /videos for allowed users", () => {
+    useAuth.mockReturnValue({
+      user: { displayName: "Admin User", email: "admin@example.com" },
+      isAllowed: true, isCrew: false, crew: null, loading: false,
+    });
+    renderJoin();
+    expect(screen.getByText(/admin/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /go to videos/i })).toHaveAttribute("href", "/videos");
+  });
+
+  it("shows a spinner and hides the form while loading", () => {
+    useAuth.mockReturnValue({ user: null, isAllowed: false, isCrew: false, crew: null, loading: true });
+    renderJoin();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/phone/i)).toBeNull();
+  });
 });
