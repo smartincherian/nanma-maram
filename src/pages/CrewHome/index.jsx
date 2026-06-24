@@ -24,6 +24,8 @@ const eyebrowSx = {
 
 const sectionSx = { ...cardSx, borderRadius: { xs: 3, sm: 4 } };
 
+const availabilitySx = { ...cardSx, borderRadius: { xs: 3, sm: 4 }, py: 1.25 };
+
 const heroSx = {
   ...cardSx,
   borderRadius: { xs: 3, sm: 4 },
@@ -78,14 +80,14 @@ const CrewHome = () => {
   };
 
   return (
-    <Box sx={pageSx}>
+    <Box sx={{ ...pageSx, display: "flex", flexDirection: "column" }}>
       <Container maxWidth="sm">
         <Stack spacing={2}>
           {/* Section 1 — identity */}
           <Paper elevation={0} sx={sectionSx}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-              <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0 }}>
-                Welcome, {crew?.name}, Jesus Loves You
+              <Typography variant="subtitle1" sx={{ fontStyle: "italic", fontWeight: 700, color: "#3b2a13", minWidth: 0 }}>
+                Welcome, {(crew?.name || "").split(" ")[0]}
               </Typography>
               <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Account menu" sx={{ p: 0.5 }}>
                 <Avatar src={user?.photoURL || undefined} alt={crew?.name} sx={{ width: 40, height: 40 }}>
@@ -105,9 +107,9 @@ const CrewHome = () => {
 
           {/* Section 2 — availability (only when no work is assigned) */}
           {!hasAssignedWork ? (
-            <Paper elevation={0} sx={sectionSx}>
+            <Paper elevation={0} sx={availabilitySx}>
               <Typography variant="overline" sx={eyebrowSx}>Availability</Typography>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 0.5 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 0.25 }}>
                 <Typography variant="body2" sx={{ color: "#5b6472" }}>
                   {available ? "You're available for new work." : "You're marked as not available."}
                 </Typography>
@@ -151,6 +153,10 @@ const CrewHome = () => {
           </Paper>
         </Stack>
       </Container>
+      <Box sx={{ flexGrow: 1 }} />
+      <Typography variant="caption" sx={{ textAlign: "center", color: "#8a6a36", fontStyle: "italic", pt: 3, pb: 3 }}>
+        Jesus Loves You 🙏
+      </Typography>
     </Box>
   );
 };

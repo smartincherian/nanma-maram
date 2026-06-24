@@ -40,7 +40,8 @@ describe("CrewHome", () => {
   it("renders the crew profile for an active crew member", () => {
     useAuth.mockReturnValue(activeCrew);
     renderHome();
-    expect(screen.getByText(/Welcome, Person, Jesus Loves You/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome, Person/i)).toBeInTheDocument();
+    expect(screen.getByText(/Jesus Loves You/i)).toBeInTheDocument();
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
   });
 
