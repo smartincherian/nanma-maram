@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { fetchCrewByEmail, registerCrew, setCrewActive } from "./crew";
+import { addDoc, collection, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { addCrew, fetchCrewByEmail, registerCrew, setCrewActive, updateCrew } from "./crew";
 
 jest.mock("firebase/firestore", () => ({
   addDoc: jest.fn(),
@@ -48,6 +48,16 @@ describe("crew accounts", () => {
       expect(await fetchCrewByEmail("")).toBeNull();
       expect(getDoc).not.toHaveBeenCalled();
     });
+
+    it("trims whitespace before lowercasing the doc id", async () => {
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        id: "person@example.com",
+        data: () => ({ name: "Person" }),
+      });
+      await fetchCrewByEmail("  Person@Example.com  ");
+      expect(doc).toHaveBeenCalledWith({ __db: true }, "videoCrew", "person@example.com");
+    });
   });
 
   describe("registerCrew", () => {
@@ -83,6 +93,45 @@ describe("crew accounts", () => {
       await setCrewActive("person@example.com", false);
       expect(doc).toHaveBeenCalledWith({ __db: true }, "videoCrew", "person@example.com");
       expect(updateDoc).toHaveBeenCalledWith("crewRef", { active: false });
+    });
+  });
+
+  describe("addCrew", () => {
+    it("writes email (trimmed+lowercased) and has NO linkedEmail key", async () => {
+      collection.mockReturnValue("crewCollection");
+      addDoc.mockResolvedValue({});
+      await addCrew({ name: "Alice", skills: ["Shorts"], email: "  Alice@Example.COM  " });
+      expect(addDoc).toHaveBeenCalledWith("crewCollection", expect.objectContaining({
+        name: "Alice",
+        skills: ["Shorts"],
+        email: "alice@example.com",
+        active: true,
+        createdAt: "SERVER_TS",
+      }));
+      const written = addDoc.mock.calls[0][1];
+      expect(written).not.toHaveProperty("linkedEmail");
+    });
+  });
+
+  describe("updateCrew", () => {
+    it("writes email, phone (trimmed) and has NO linkedEmail key", async () => {
+      updateDoc.mockResolvedValue({});
+      await updateCrew("abc123", {
+        name: "  Bob  ",
+        skills: ["Long"],
+        email: "  Bob@Example.COM  ",
+        phone: "  1234  ",
+        active: true,
+      });
+      expect(updateDoc).toHaveBeenCalledWith("crewRef", {
+        name: "Bob",
+        skills: ["Long"],
+        email: "bob@example.com",
+        phone: "1234",
+        active: true,
+      });
+      const written = updateDoc.mock.calls[0][1];
+      expect(written).not.toHaveProperty("linkedEmail");
     });
   });
 });

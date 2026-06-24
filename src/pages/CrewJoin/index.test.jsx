@@ -1,17 +1,20 @@
 // src/pages/CrewJoin/index.test.jsx
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { useAuth } from "../../components/AuthProvider";
+import { registerCrew } from "../../firebase/video/crew";
 import CrewJoin from "./index";
 
 jest.mock("../../components/AuthProvider", () => ({ useAuth: jest.fn() }));
 jest.mock("../../firebase/auth", () => ({ signInWithGoogle: jest.fn() }));
 jest.mock("../../firebase/video/crew", () => ({ registerCrew: jest.fn() }));
+
+const mockShowSnackbar = jest.fn();
 jest.mock("../../components/Snackbar", () => {
   const React = require("react");
   return {
-    SnackbarContext: React.createContext({ showSnackbar: jest.fn(), hideSnackbar: jest.fn() }),
+    SnackbarContext: React.createContext({ showSnackbar: (...args) => mockShowSnackbar(...args), hideSnackbar: jest.fn() }),
     SNACK_BAR_SEVERITY_TYPES: { ERROR: "error", SUCCESS: "success" },
   };
 });
@@ -76,5 +79,74 @@ describe("CrewJoin", () => {
     renderJoin();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
     expect(screen.queryByLabelText(/phone/i)).toBeNull();
+  });
+
+  describe("submit flow", () => {
+    const signedInNonCrew = {
+      user: { displayName: "Test User", email: "test@example.com" },
+      isAllowed: false, isCrew: false, crew: null, loading: false,
+    };
+
+    beforeEach(() => {
+      mockShowSnackbar.mockClear();
+    });
+
+    it("calls registerCrew with email, phone, and skills on successful submit", async () => {
+      registerCrew.mockResolvedValueOnce();
+      useAuth.mockReturnValue(signedInNonCrew);
+      renderJoin();
+
+      // Fill the phone field
+      fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: "9876543210" } });
+
+      // Open the MUI Select and pick "Shorts"
+      fireEvent.mouseDown(screen.getByText("Select your skills"));
+      const option = await screen.findByRole("option", { name: "Shorts" });
+      fireEvent.click(option);
+
+      // Close the MUI Select dropdown (Escape closes the popover)
+      fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+
+      // Click submit
+      fireEvent.click(screen.getByRole("button", { name: /complete signup/i }));
+
+      await waitFor(() => {
+        expect(registerCrew).toHaveBeenCalledWith(
+          expect.objectContaining({
+            email: "test@example.com",
+            phone: "9876543210",
+            skills: ["Shorts"],
+          })
+        );
+      });
+    });
+
+    it("keeps the form visible when registerCrew rejects", async () => {
+      registerCrew.mockRejectedValueOnce(new Error("boom"));
+      useAuth.mockReturnValue(signedInNonCrew);
+      renderJoin();
+
+      // Fill the phone field
+      fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: "9876543210" } });
+
+      // Open the MUI Select and pick "Shorts"
+      fireEvent.mouseDown(screen.getByText("Select your skills"));
+      const option = await screen.findByRole("option", { name: "Shorts" });
+      fireEvent.click(option);
+
+      // Close the MUI Select dropdown (Escape closes the popover)
+      fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+
+      // Click submit
+      fireEvent.click(screen.getByRole("button", { name: /complete signup/i }));
+
+      // Wait for the rejection to propagate and snackbar to be called
+      await waitFor(() => {
+        expect(mockShowSnackbar).toHaveBeenCalledWith("boom", "error");
+      });
+
+      // Form should still be visible (not navigated away)
+      expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
+    });
   });
 });

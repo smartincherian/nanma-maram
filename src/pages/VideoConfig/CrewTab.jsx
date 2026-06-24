@@ -62,7 +62,7 @@ const CrewTab = () => {
     try {
       const existing = crew.find((m) => m.id === dialog.id) || {};
       const payload = dialog.id
-        ? { name, active: dialog.active, skills: existing.skills || [], linkedEmail: existing.email || existing.linkedEmail || "" }
+        ? { name, active: dialog.active, skills: existing.skills || [], email: existing.email || existing.linkedEmail || "", phone: existing.phone || "" }
         : { name, active: dialog.active };
       if (dialog.id) {
         await updateCrew(dialog.id, payload);
@@ -117,7 +117,7 @@ const CrewTab = () => {
           <Paper key={member.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 1, opacity: member.active === false ? 0.55 : 1 }}>
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
               <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>{member.name}</Typography>
-              {member.email ? <Typography variant="body2" sx={{ color: "#5b6472" }}>{member.email}</Typography> : null}
+              {(member.email || member.linkedEmail) ? <Typography variant="body2" sx={{ color: "#5b6472" }}>{member.email || member.linkedEmail}</Typography> : null}
               {member.phone ? <Typography variant="body2" sx={{ color: "#5b6472" }}>{member.phone}</Typography> : null}
               {(member.skills || []).length > 0 ? (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>

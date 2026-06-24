@@ -23,7 +23,7 @@ export const listCrew = async () => {
     .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
 };
 
-export const addCrew = async ({ name, skills, linkedEmail }) => {
+export const addCrew = async ({ name, skills, email }) => {
   const trimmed = (name || "").trim();
   if (!trimmed) {
     throw new Error("Crew member name is required.");
@@ -31,17 +31,18 @@ export const addCrew = async ({ name, skills, linkedEmail }) => {
   await addDoc(collection(DB, CREW), {
     name: trimmed,
     skills: skills || [],
-    linkedEmail: (linkedEmail || "").trim().toLowerCase(),
+    email: (email || "").trim().toLowerCase(),
     active: true,
     createdAt: serverTimestamp(),
   });
 };
 
-export const updateCrew = async (id, { name, skills, linkedEmail, active }) => {
+export const updateCrew = async (id, { name, skills, email, phone, active }) => {
   await updateDoc(doc(DB, CREW, id), {
     name: (name || "").trim(),
     skills: skills || [],
-    linkedEmail: (linkedEmail || "").trim().toLowerCase(),
+    email: (email || "").trim().toLowerCase(),
+    phone: (phone || "").trim(),
     active: active !== false,
   });
 };
@@ -54,7 +55,7 @@ export const fetchCrewByEmail = async (email) => {
   if (!email) {
     return null;
   }
-  const snapshot = await getDoc(doc(DB, CREW, email.toLowerCase()));
+  const snapshot = await getDoc(doc(DB, CREW, email.trim().toLowerCase()));
   if (!snapshot.exists()) {
     return null;
   }
