@@ -15,9 +15,9 @@ import {
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
 import ChapelFooter from "../../components/ChapelFooter";
-import { listStages } from "../../firebase/video/stages";
 import { addVideo, getVideo, updateVideoMeta } from "../../firebase/video/videos";
 import { buildStagesFromList } from "../../utils/videoWorkflow";
+import { VIDEO_STEPS } from "../../utils/videoSteps";
 import { amberButtonSx } from "./ui";
 
 const VideoForm = () => {
@@ -63,15 +63,9 @@ const VideoForm = () => {
         navigate(`/videos/${id}`);
         return;
       }
-      const steps = await listStages();
-      if (steps.length === 0) {
-        showSnackbar("Add steps first under Manage.", SNACK_BAR_SEVERITY_TYPES.ERROR);
-        setSaving(false);
-        return;
-      }
       const newId = await addVideo({
         title: title.trim(),
-        stages: buildStagesFromList(steps),
+        stages: buildStagesFromList(VIDEO_STEPS),
         createdBy: user?.email || "",
       });
       showSnackbar("Video created", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
