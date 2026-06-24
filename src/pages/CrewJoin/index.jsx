@@ -11,7 +11,6 @@ import { signInWithGoogle } from "../../firebase/auth";
 import { registerCrew } from "../../firebase/video/crew";
 import SkillsSelect from "../../components/SkillsSelect";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
-import { CrewWatermark } from "../../components/Zentangle";
 import { amberButtonSx, cardSx } from "../Videos/ui";
 
 const pageSx = {
@@ -26,9 +25,8 @@ const pageSx = {
 const Centered = ({ children }) => (
   <Box sx={pageSx}>
     <Container maxWidth="sm">
-      <Card elevation={0} sx={{ position: "relative", overflow: "hidden", ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
-        <CrewWatermark />
-        <CardContent sx={{ p: { xs: 2.5, sm: 3.5 }, position: "relative" }}>{children}</CardContent>
+      <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
+        <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>{children}</CardContent>
       </Card>
     </Container>
   </Box>

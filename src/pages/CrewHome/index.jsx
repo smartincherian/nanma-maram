@@ -1,8 +1,8 @@
 import React, { useContext, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
-  Avatar, Box, Card, CardContent, Chip, CircularProgress, Container,
-  FormControlLabel, IconButton, Menu, MenuItem, Stack, Switch, Typography,
+  Avatar, Box, Chip, CircularProgress, Container, FormControlLabel,
+  IconButton, Menu, MenuItem, Paper, Stack, Switch, Typography,
 } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
@@ -11,7 +11,6 @@ import { useAuth } from "../../components/AuthProvider";
 import { signOutUser } from "../../firebase/auth";
 import { setCrewAvailability } from "../../firebase/video/crew";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
-import { ZentangleStrip, CrewWatermark } from "../../components/Zentangle";
 import { cardSx } from "../Videos/ui";
 
 const eyebrowSx = {
@@ -23,19 +22,14 @@ const eyebrowSx = {
   fontSize: "0.72rem",
 };
 
-const tileSx = {
-  borderRadius: 3,
-  border: "1px solid rgba(160, 103, 38, 0.18)",
-  backgroundColor: "rgba(255, 252, 247, 0.55)",
-  p: { xs: 1.75, sm: 2 },
-};
+const sectionSx = { ...cardSx, borderRadius: { xs: 3, sm: 4 } };
 
 const heroSx = {
-  borderRadius: 3,
-  overflow: "hidden",
-  border: "1.5px solid rgba(147, 81, 0, 0.3)",
-  background: "linear-gradient(180deg, rgba(255,250,242,0.96) 0%, rgba(255,243,228,0.96) 100%)",
-  boxShadow: "0 12px 30px rgba(147, 81, 0, 0.1)",
+  ...cardSx,
+  borderRadius: { xs: 3, sm: 4 },
+  border: "1.5px solid rgba(147, 81, 0, 0.32)",
+  boxShadow: "0 14px 32px rgba(147, 81, 0, 0.12)",
+  background: "linear-gradient(180deg, rgba(255,250,242,0.97) 0%, rgba(255,242,226,0.97) 100%)",
 };
 
 const pageSx = {
@@ -86,85 +80,76 @@ const CrewHome = () => {
   return (
     <Box sx={pageSx}>
       <Container maxWidth="sm">
-        <Card elevation={0} sx={{ position: "relative", overflow: "hidden", ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
-          <CrewWatermark />
-          <CardContent sx={{ p: { xs: 3, sm: 4 }, position: "relative" }}>
-            <Stack spacing={2}>
-              <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
-                <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0, mt: 0.5 }}>
-                  Welcome, {crew?.name}, Jesus Loves You
-                </Typography>
-                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Account menu" sx={{ p: 0.5 }}>
-                  <Avatar src={user?.photoURL || undefined} alt={crew?.name} sx={{ width: 40, height: 40 }}>
-                    {crew?.name?.[0]?.toUpperCase()}
-                  </Avatar>
-                </IconButton>
-                <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-                  <MenuItem
-                    onClick={() => { setAnchorEl(null); navigate("/crew/profile"); }}
-                  >
-                    <PersonRoundedIcon fontSize="small" sx={{ mr: 1, color: "#935100" }} /> Profile
-                  </MenuItem>
-                  <MenuItem onClick={() => { setAnchorEl(null); signOutUser(); }}>
-                    <LogoutRoundedIcon fontSize="small" sx={{ mr: 1, color: "#b3261e" }} /> Logout
-                  </MenuItem>
-                </Menu>
-              </Stack>
-
-              <ZentangleStrip height={16} sx={{ opacity: 0.7 }} />
-
-              {!hasAssignedWork ? (
-                <Box sx={tileSx}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                    <Box>
-                      <Typography variant="overline" sx={eyebrowSx}>Availability</Typography>
-                      <Typography variant="body2" sx={{ color: "#5b6472" }}>
-                        {available ? "You're available for new work." : "You're marked as not available."}
-                      </Typography>
-                    </Box>
-                    <FormControlLabel
-                      sx={{ mr: 0 }}
-                      control={
-                        <Switch
-                          checked={available}
-                          onChange={toggleAvailability}
-                          disabled={savingAvailability}
-                          color="success"
-                        />
-                      }
-                      label={
-                        <Chip
-                          size="small"
-                          label={available ? "Available" : "Not available"}
-                          sx={{
-                            fontWeight: 700,
-                            backgroundColor: available ? "rgba(46,125,50,0.14)" : "rgba(91,100,114,0.14)",
-                            color: available ? "#2e7d32" : "#5b6472",
-                          }}
-                        />
-                      }
-                    />
-                  </Stack>
-                </Box>
-              ) : null}
-
-              <Box sx={heroSx}>
-                <ZentangleStrip height={14} sx={{ opacity: 0.6 }} />
-                <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <AssignmentRoundedIcon sx={{ color: "#935100" }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#3b2a13", letterSpacing: "0.04em" }}>
-                      Your works
-                    </Typography>
-                  </Stack>
-                  <Typography variant="body2" sx={{ color: "#8a6a36", mt: 1 }}>
-                    No works assigned yet — your pending works will appear here. (Coming soon)
-                  </Typography>
-                </Box>
-              </Box>
+        <Stack spacing={2}>
+          {/* Section 1 — identity */}
+          <Paper elevation={0} sx={sectionSx}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+              <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 600, color: "#3b2a13", minWidth: 0 }}>
+                Welcome, {crew?.name}, Jesus Loves You
+              </Typography>
+              <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Account menu" sx={{ p: 0.5 }}>
+                <Avatar src={user?.photoURL || undefined} alt={crew?.name} sx={{ width: 40, height: 40 }}>
+                  {crew?.name?.[0]?.toUpperCase()}
+                </Avatar>
+              </IconButton>
+              <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+                <MenuItem onClick={() => { setAnchorEl(null); navigate("/crew/profile"); }}>
+                  <PersonRoundedIcon fontSize="small" sx={{ mr: 1, color: "#935100" }} /> Profile
+                </MenuItem>
+                <MenuItem onClick={() => { setAnchorEl(null); signOutUser(); }}>
+                  <LogoutRoundedIcon fontSize="small" sx={{ mr: 1, color: "#b3261e" }} /> Logout
+                </MenuItem>
+              </Menu>
             </Stack>
-          </CardContent>
-        </Card>
+          </Paper>
+
+          {/* Section 2 — availability (only when no work is assigned) */}
+          {!hasAssignedWork ? (
+            <Paper elevation={0} sx={sectionSx}>
+              <Typography variant="overline" sx={eyebrowSx}>Availability</Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mt: 0.5 }}>
+                <Typography variant="body2" sx={{ color: "#5b6472" }}>
+                  {available ? "You're available for new work." : "You're marked as not available."}
+                </Typography>
+                <FormControlLabel
+                  sx={{ mr: 0 }}
+                  control={
+                    <Switch
+                      checked={available}
+                      onChange={toggleAvailability}
+                      disabled={savingAvailability}
+                      color="success"
+                    />
+                  }
+                  label={
+                    <Chip
+                      size="small"
+                      label={available ? "Available" : "Not available"}
+                      sx={{
+                        fontWeight: 700,
+                        backgroundColor: available ? "rgba(46,125,50,0.14)" : "rgba(91,100,114,0.14)",
+                        color: available ? "#2e7d32" : "#5b6472",
+                      }}
+                    />
+                  }
+                />
+              </Stack>
+            </Paper>
+          ) : null}
+
+          {/* Section 3 — pending works (the focus) */}
+          <Paper elevation={0} sx={heroSx}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <AssignmentRoundedIcon sx={{ color: "#935100" }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, color: "#3b2a13" }}>
+                Your works
+              </Typography>
+            </Stack>
+            <Typography variant="body2" sx={{ color: "#8a6a36", mt: 1 }}>
+              No works assigned yet — your pending works will appear here. (Coming soon)
+            </Typography>
+          </Paper>
+        </Stack>
       </Container>
     </Box>
   );
