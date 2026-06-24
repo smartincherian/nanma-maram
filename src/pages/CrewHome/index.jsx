@@ -41,11 +41,8 @@ const CrewHome = () => {
                   style={{ maxWidth: "100%", height: "auto", maxHeight: "120px" }}
                 />
               </Box>
-              <Typography variant="overline" sx={{ color: "#935100", fontWeight: 700, letterSpacing: 1 }}>
-                Welcome, fellow servant
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13", mt: -1 }}>
-                {crew?.name}
+              <Typography variant="h5" sx={{ fontWeight: 800, color: "#3b2a13", lineHeight: 1.3 }}>
+                Welcome, {crew?.name}, Jesus Loves You
               </Typography>
               <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic" }}>
                 Thank you for serving Jesus with your gifts. 🙏
