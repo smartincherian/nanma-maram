@@ -19,7 +19,7 @@ const pageSx = {
   minHeight: "100vh",
   display: "flex",
   alignItems: "center",
-  py: { xs: 2.5, sm: 5 },
+  py: { xs: 3, sm: 5 },
   background:
     "radial-gradient(circle at top, rgba(255, 232, 208, 0.95) 0%, rgba(255, 247, 236, 0.96) 34%, #fffdf8 100%)",
 };
@@ -119,9 +119,9 @@ const CrewJoin = () => {
 
   return (
     <Centered>
-      <Stack spacing={1.75}>
+      <Stack spacing={2.25}>
         <Typography variant="h6" sx={{ fontWeight: 800, color: "#3b2a13", lineHeight: 1.3 }}>
-          Offer your gifts for His glory and serve the Lord with gladness.
+          Offer your gifts for His glory
         </Typography>
         {isAllowed ? (
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ flexWrap: "wrap", gap: 1 }}>
@@ -205,8 +205,11 @@ const CrewJoin = () => {
           </Select>
         </Box>
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>
-          Yes, I'll serve
+          I'll work for Jesus
         </Button>
+        <Typography variant="body2" sx={{ color: "#8a6a36", fontStyle: "italic", textAlign: "center" }}>
+          “Serve the Lord with gladness; come into his presence with singing.” — Psalm 100:2
+        </Typography>
       </Stack>
     </Centered>
   );

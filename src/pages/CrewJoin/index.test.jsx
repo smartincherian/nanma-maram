@@ -111,7 +111,7 @@ describe("CrewJoin", () => {
       fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
 
       // Click submit
-      fireEvent.click(screen.getByRole("button", { name: /yes, i'll serve/i }));
+      fireEvent.click(screen.getByRole("button", { name: /work for jesus/i }));
 
       await waitFor(() => {
         expect(registerCrew).toHaveBeenCalledWith(
@@ -141,7 +141,7 @@ describe("CrewJoin", () => {
       fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
 
       // Click submit
-      fireEvent.click(screen.getByRole("button", { name: /yes, i'll serve/i }));
+      fireEvent.click(screen.getByRole("button", { name: /work for jesus/i }));
 
       // Wait for the rejection to propagate and snackbar to be called
       await waitFor(() => {
