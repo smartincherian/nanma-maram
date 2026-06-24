@@ -33,4 +33,11 @@ describe("CrewHome", () => {
     expect(screen.getByText("Shorts")).toBeInTheDocument();
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
   });
+
+  it("shows a spinner while loading", () => {
+    useAuth.mockReturnValue({ crew: null, isCrew: false, loading: true });
+    renderHome();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+  });
 });
