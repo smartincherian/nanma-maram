@@ -16,8 +16,6 @@ import {
 import { useAuth } from "../../components/AuthProvider";
 import ChapelFooter from "../../components/ChapelFooter";
 import { addVideo, getVideo, updateVideoMeta } from "../../firebase/video/videos";
-import { buildStagesFromList } from "../../utils/videoWorkflow";
-import { VIDEO_STEPS } from "../../utils/videoSteps";
 import { amberButtonSx } from "./ui";
 
 const VideoForm = () => {
@@ -65,7 +63,6 @@ const VideoForm = () => {
       }
       const newId = await addVideo({
         title: title.trim(),
-        stages: buildStagesFromList(VIDEO_STEPS),
         createdBy: user?.email || "",
       });
       showSnackbar("Video created", SNACK_BAR_SEVERITY_TYPES.SUCCESS);

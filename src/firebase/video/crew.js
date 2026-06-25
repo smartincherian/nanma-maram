@@ -1,7 +1,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -47,8 +46,11 @@ export const updateCrew = async (id, { name, skills, email, phone, active }) => 
   });
 };
 
+// Soft delete — crew docs are never removed (existing assignments resolve their
+// name from the doc). Marking inactive hides them from the crew list and the
+// assignment picker.
 export const deleteCrew = async (id) => {
-  await deleteDoc(doc(DB, CREW, id));
+  await updateDoc(doc(DB, CREW, id), { active: false });
 };
 
 export const fetchCrewByEmail = async (email) => {

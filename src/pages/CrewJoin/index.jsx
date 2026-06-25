@@ -27,7 +27,16 @@ const Centered = ({ children }) => (
   <Box sx={pageSx}>
     <Container maxWidth="sm">
       <Card elevation={0} sx={{ ...cardSx, borderRadius: { xs: 4, sm: 5 } }}>
-        <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>{children}</CardContent>
+        <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: { xs: 2, sm: 2.5 } }}>
+            <img
+              src="/images/logo.jpg"
+              alt="Nanma Maram"
+              style={{ maxWidth: "100%", height: "auto", maxHeight: "120px" }}
+            />
+          </Box>
+          {children}
+        </CardContent>
       </Card>
       <ChapelFooter />
     </Container>

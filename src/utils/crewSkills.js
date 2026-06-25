@@ -19,8 +19,7 @@ export const CREW_SKILL_GROUPS = [
   {
     label: "Checking",
     skills: [
-      { value: "before_editing_content_checking", label: "Before editing content checking" },
-      { value: "after_editing_content_checking", label: "After editing content checking" },
+      { value: "content_checking", label: "Content checking" },
     ],
   },
   {
@@ -34,7 +33,14 @@ export const CREW_SKILL_GROUPS = [
 
 export const CREW_SKILLS = CREW_SKILL_GROUPS.flatMap((group) => group.skills);
 
+// The two checking skills were merged into a single "Content checking". Crew
+// saved with either old value still render the merged label.
+const LEGACY_SKILL_LABELS = {
+  before_editing_content_checking: "Content checking",
+  after_editing_content_checking: "Content checking",
+};
+
 export const getCrewSkillLabel = (value) => {
   const skill = CREW_SKILLS.find((item) => item.value === value);
-  return skill?.label || value;
+  return skill?.label || LEGACY_SKILL_LABELS[value] || value;
 };

@@ -6,17 +6,12 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
-  runTransaction,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
 import { DB } from "../../config/firebase";
-import {
-  STAGE_STATUS,
-  VIDEO_STATUS,
-  advancePipeline,
-  deriveStatus,
-} from "../../utils/videoWorkflow";
+import { VIDEO_STATUS } from "../../utils/videoWorkflow";
+import { deleteWorksForVideo } from "./works";
 
 const VIDEOS = "videos";
 
@@ -51,15 +46,17 @@ export const subscribeVideo = (id, cb) =>
     cb(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
   });
 
-export const addVideo = async ({ title, stages, createdBy }) => {
+// A new video carries only metadata + a zeroed rollup. Its steps live in code
+// (videoSteps.js) and become work docs lazily, the first time each is assigned.
+export const addVideo = async ({ title, createdBy }) => {
   const trimmed = (title || "").trim();
   if (!trimmed) {
     throw new Error("Video title is required.");
   }
   const ref = await addDoc(collection(DB, VIDEOS), {
     title: trimmed,
-    status: deriveStatus(stages || []),
-    stages: stages || [],
+    status: VIDEO_STATUS.ACTIVE,
+    doneCount: 0,
     createdBy: createdBy || "",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -72,39 +69,6 @@ export const updateVideoMeta = async (id, patch) => {
 };
 
 export const deleteVideo = async (id) => {
+  await deleteWorksForVideo(id);
   await deleteDoc(videoRef(id));
-};
-
-// Atomically update a single stage and recompute the video's status, mirroring
-// the transactional pattern used by addCounter.
-export const updateVideoStage = async (videoId, stageId, patch, adminEmail) => {
-  await runTransaction(DB, async (tx) => {
-    const ref = videoRef(videoId);
-    const snapshot = await tx.get(ref);
-    if (!snapshot.exists()) {
-      throw new Error("Video not found.");
-    }
-    const data = snapshot.data();
-    const patched = (data.stages || []).map((stage) => {
-      if (stage.stageId !== stageId) {
-        return stage;
-      }
-      const next = { ...stage, ...patch, updatedBy: adminEmail || "", updatedAt: Date.now() };
-      if (patch.status === STAGE_STATUS.DONE && stage.status !== STAGE_STATUS.DONE) {
-        next.completedAt = Date.now();
-      } else if (patch.status && patch.status !== STAGE_STATUS.DONE) {
-        next.completedAt = null;
-      }
-      return next;
-    });
-    // Re-normalize so the next stage auto-starts (or the earliest unfinished
-    // stage reactivates after a reopen).
-    const stages = advancePipeline(patched);
-
-    tx.update(ref, {
-      stages,
-      status: deriveStatus(stages),
-      updatedAt: serverTimestamp(),
-    });
-  });
 };

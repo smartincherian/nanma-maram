@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -12,10 +12,13 @@ import {
   DialogTitle,
   IconButton,
   Paper,
+  Slide,
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -25,84 +28,122 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
-import { subscribeVideo, updateVideoStage, deleteVideo } from "../../firebase/video/videos";
+import { subscribeVideo, deleteVideo } from "../../firebase/video/videos";
+import { subscribeVideoWorks, updateWork } from "../../firebase/video/works";
 import { listCrew } from "../../firebase/video/crew";
-import {
-  STAGE_STATUS,
-  progress,
-} from "../../utils/videoWorkflow";
+import { STAGE_STATUS, mergeStepsWithWorks } from "../../utils/videoWorkflow";
+import { getStepSkills, getStepName } from "../../utils/videoSteps";
 import { amberButtonSx, VIDEO_STATUS_META } from "./ui";
 import StageTimeline from "./components/StageTimeline";
 import CrewPicker from "./components/CrewPicker";
 import ChapelFooter from "../../components/ChapelFooter";
+
+// Slide up — used so the stage dialog reads as a bottom sheet on phones.
+const SlideUp = React.forwardRef(function SlideUp(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const VideoDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [video, setVideo] = useState(undefined); // undefined = loading, null = missing
+  const [works, setWorks] = useState([]);
   const [crew, setCrew] = useState([]);
   const [editStage, setEditStage] = useState(null); // { stageId, status, assigneeId, assigneeName, note }
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribeVideo(id, setVideo);
+    const unsubVideo = subscribeVideo(id, setVideo);
+    const unsubWorks = subscribeVideoWorks(id, setWorks);
     listCrew().then(setCrew).catch(() => {});
-    return unsub;
+    return () => {
+      unsubVideo();
+      unsubWorks();
+    };
   }, [id]);
 
-  const openStageDialog = (stage) =>
+  // The 7 fixed steps with each step's live work overlaid; assignee names are
+  // resolved from the crew list since work docs only store the id.
+  const crewById = useMemo(
+    () => Object.fromEntries(crew.map((c) => [c.id, c])),
+    [crew]
+  );
+  const steps = useMemo(
+    () => mergeStepsWithWorks(works, (assigneeId) => crewById[assigneeId]?.name || null),
+    [works, crewById]
+  );
+
+  const openStageDialog = (stage, startOnSave = false) =>
     setEditStage({
       stageId: stage.stageId,
-      name: stage.name,
+      name: getStepName(stage.stageId, stage.name),
       status: stage.status,
       assigneeId: stage.assigneeId,
       assigneeName: stage.assigneeName,
       note: stage.note || "",
+      dueDate: stage.dueDate || "",
+      startOnSave,
     });
 
-  const handleCompleteStage = async (stage) => {
-    try {
-      await updateVideoStage(id, stage.stageId, { status: STAGE_STATUS.DONE }, user?.email || "");
-    } catch (e) {
-      showSnackbar(e?.message || "Could not update stage.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+  // Tapping a step's circle: a pending step opens the assignee dialog first
+  // (it becomes In progress on save); In progress → Done; Done → reopen. Steps
+  // are independent, so this never touches the other steps.
+  const handleCircleTap = async (stage) => {
+    if (stage.status === STAGE_STATUS.PENDING) {
+      openStageDialog(stage, true);
       return;
     }
-    showSnackbar(`${stage.name} complete`, SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+    const next = stage.status === STAGE_STATUS.IN_PROGRESS ? STAGE_STATUS.DONE : STAGE_STATUS.PENDING;
+    try {
+      await updateWork(id, stage.stageId, { status: next }, user?.email || "");
+    } catch (e) {
+      showSnackbar(e?.message || "Could not update step.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+      return;
+    }
+    const stageName = getStepName(stage.stageId, stage.name);
+    showSnackbar(
+      next === STAGE_STATUS.DONE ? `${stageName} complete` : `${stageName} reopened`,
+      SNACK_BAR_SEVERITY_TYPES.SUCCESS
+    );
   };
 
-  // Save assignee + note from the Edit dialog without touching status.
+  // Save assignee + note. When opened from a pending step's circle
+  // (startOnSave), also move the step to In progress.
   const handleStageSave = async () => {
     setSaving(true);
+    const patch = {
+      assigneeId: editStage.assigneeId,
+      note: editStage.note,
+      dueDate: editStage.dueDate || null,
+    };
+    if (editStage.startOnSave) {
+      patch.status = STAGE_STATUS.IN_PROGRESS;
+    }
     try {
-      await updateVideoStage(
-        id,
-        editStage.stageId,
-        {
-          assigneeId: editStage.assigneeId,
-          assigneeName: editStage.assigneeName,
-          note: editStage.note,
-        },
-        user?.email || ""
-      );
+      await updateWork(id, editStage.stageId, patch, user?.email || "");
     } catch (e) {
       showSnackbar(e?.message || "Could not update stage.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       setSaving(false);
       return;
     }
+    const started = editStage.startOnSave;
     setSaving(false);
     setEditStage(null);
-    showSnackbar("Stage updated", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+    showSnackbar(started ? "Step started" : "Stage updated", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
   };
 
-  // Reopen a completed stage — it becomes the active stage again.
+  // Reopen a completed stage — it goes straight back to In progress (not pending),
+  // since reopening means work is resuming on it.
   const handleReopenStage = async () => {
     setSaving(true);
     try {
-      await updateVideoStage(id, editStage.stageId, { status: STAGE_STATUS.PENDING }, user?.email || "");
+      await updateWork(id, editStage.stageId, { status: STAGE_STATUS.IN_PROGRESS }, user?.email || "");
     } catch (e) {
       showSnackbar(e?.message || "Could not reopen stage.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       setSaving(false);
@@ -141,7 +182,8 @@ const VideoDetail = () => {
     );
   }
 
-  const { done, total } = progress(video);
+  const done = steps.filter((s) => s.status === STAGE_STATUS.DONE).length;
+  const total = steps.length;
   const statusMeta = VIDEO_STATUS_META[video.status] || VIDEO_STATUS_META.active;
 
   return (
@@ -167,19 +209,46 @@ const VideoDetail = () => {
       <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 4, border: "1px solid rgba(160,103,38,0.16)" }}>
         <Typography variant="overline" sx={{ letterSpacing: "0.16em", color: "#a16207", fontWeight: 700 }}>Steps</Typography>
         <Box sx={{ mt: 2 }}>
-          <StageTimeline stages={video.stages || []} onCompleteStage={handleCompleteStage} onEditStage={openStageDialog} />
+          <StageTimeline stages={steps} onCycleStage={handleCircleTap} onEditStage={openStageDialog} />
         </Box>
       </Paper>
 
-      {/* Stage update dialog */}
-      <Dialog open={editStage !== null} onClose={() => setEditStage(null)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: 800 }}>{editStage?.name}</DialogTitle>
+      {/* Stage update dialog — a bottom sheet on phones, centered dialog above */}
+      <Dialog
+        open={editStage !== null}
+        onClose={() => setEditStage(null)}
+        fullWidth
+        maxWidth="xs"
+        TransitionComponent={isMobile ? SlideUp : undefined}
+        sx={{ "& .MuiDialog-container": { alignItems: { xs: "flex-end", sm: "center" } } }}
+        PaperProps={{
+          sx: {
+            m: { xs: 0, sm: 4 },
+            width: "100%",
+            maxWidth: { sm: 444 },
+            borderRadius: { xs: "22px 22px 0 0", sm: 4 },
+          },
+        }}
+      >
+        {isMobile ? (
+          <Box sx={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(147,81,0,0.25)", mx: "auto", mt: 1.25 }} />
+        ) : null}
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>{editStage?.name}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <CrewPicker
               crew={crew}
               value={editStage?.assigneeId || null}
+              relevantSkills={editStage ? getStepSkills(editStage.stageId) : []}
               onChange={(assigneeId, assigneeName) => setEditStage((s) => ({ ...s, assigneeId, assigneeName }))}
+            />
+            <TextField
+              label="Expected by (optional)"
+              type="date"
+              value={editStage?.dueDate || ""}
+              onChange={(e) => setEditStage((s) => ({ ...s, dueDate: e.target.value }))}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
             />
             <TextField label="Note / link (optional)" value={editStage?.note || ""} onChange={(e) => setEditStage((s) => ({ ...s, note: e.target.value }))} fullWidth multiline minRows={2} placeholder="e.g. YouTube URL" />
             {editStage?.status === STAGE_STATUS.DONE ? (
@@ -189,9 +258,32 @@ const VideoDetail = () => {
             ) : null}
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEditStage(null)} sx={{ textTransform: "none" }}>Cancel</Button>
-          <Button variant="contained" onClick={handleStageSave} disabled={saving} sx={amberButtonSx}>Save</Button>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: { xs: `calc(16px + env(safe-area-inset-bottom))`, sm: 2 },
+            pt: 1,
+            gap: 1,
+            flexDirection: { xs: "column-reverse", sm: "row" },
+            "& > :not(style)": { ml: { xs: 0, sm: 1 } },
+          }}
+        >
+          <Button
+            onClick={() => setEditStage(null)}
+            fullWidth={isMobile}
+            sx={{ textTransform: "none", fontWeight: 600, color: "#5b6472", py: { xs: 1.1, sm: 0.5 } }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleStageSave}
+            disabled={saving}
+            fullWidth={isMobile}
+            sx={{ ...amberButtonSx, px: 3, py: { xs: 1.1, sm: 0.75 } }}
+          >
+            {editStage?.startOnSave ? "Start step" : "Save"}
+          </Button>
         </DialogActions>
       </Dialog>
 

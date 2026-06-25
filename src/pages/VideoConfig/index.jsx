@@ -1,16 +1,39 @@
-import React, { useState } from "react";
-import { Box, Button, Container, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
+import React, { useContext } from "react";
+import { Box, Button, Container, IconButton, Paper, Stack, Typography } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import GroupAddRoundedIcon from "@mui/icons-material/GroupAddRounded";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../components/AuthProvider";
+import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
 import ChapelFooter from "../../components/ChapelFooter";
-import StagesTab from "./StagesTab";
 import CrewTab from "./CrewTab";
+
+const linkIconBtnSx = {
+  color: "#935100",
+  border: "1px solid rgba(160,103,38,0.4)",
+  borderRadius: 2,
+};
 
 const VideoConfig = () => {
   const navigate = useNavigate();
   const { isOwner } = useAuth();
-  const [tab, setTab] = useState(0);
+  const { showSnackbar } = useContext(SnackbarContext);
+
+  // Shareable invite link. Pointing at /crew/join means an already-signed-in crew
+  // member who opens it is redirected to their crew home; everyone else gets the
+  // sign-in / registration flow.
+  const crewLink = `${window.location.origin}/crew/join`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(crewLink);
+      showSnackbar("Crew link copied.", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+    } catch (e) {
+      showSnackbar("Could not copy the link. Please try again.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+    }
+  };
 
   if (!isOwner) {
     return (
@@ -20,7 +43,7 @@ const VideoConfig = () => {
             Owners only
           </Typography>
           <Typography sx={{ color: "#5b6472", mb: 3 }}>
-            Only owner accounts can manage video steps and crew.
+            Only owner accounts can manage the crew.
           </Typography>
           <Button variant="contained" onClick={() => navigate("/videos")} sx={{ textTransform: "none", fontWeight: 700 }}>
             Back to Videos
@@ -42,25 +65,26 @@ const VideoConfig = () => {
         </Button>
       </Stack>
 
-      <Typography sx={{ fontWeight: 800, color: "#1f2937", mb: 0.5, fontSize: { xs: "1.5rem", sm: "2rem" } }}>
-        Manage
-      </Typography>
-      <Typography sx={{ color: "#5b6472", mb: 2 }}>
-        Set the production steps and the crew.
+      <Typography sx={{ fontWeight: 800, color: "#1f2937", mb: 1.5, fontSize: { xs: "1.5rem", sm: "2rem" } }}>
+        Crew
       </Typography>
 
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-        <Tabs value={tab} onChange={(_e, v) => setTab(v)}
-          textColor="inherit"
-          TabIndicatorProps={{ sx: { backgroundColor: "#d67b1f" } }}
-          sx={{ "& .Mui-selected": { color: "#8a4b00" }, "& .MuiTab-root": { textTransform: "none", fontWeight: 700 } }}
-        >
-          <Tab label="Steps" />
-          <Tab label="Crew" />
-        </Tabs>
-      </Box>
+      {/* Shareable link for inviting crew — compact, icon-only actions. */}
+      <Paper elevation={0} sx={{ p: 1.25, mb: 2.5, borderRadius: 3, border: "1px solid rgba(160,103,38,0.16)", background: "linear-gradient(180deg, rgba(255,250,242,0.97) 0%, rgba(255,242,226,0.97) 100%)" }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <GroupAddRoundedIcon sx={{ color: "#935100" }} fontSize="small" />
+          <Typography sx={{ fontWeight: 800, color: "#3b2a13", fontSize: "0.95rem" }}>Crew link</Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <IconButton aria-label="Copy crew link" onClick={handleCopyLink} size="small" sx={linkIconBtnSx}>
+            <ContentCopyRoundedIcon fontSize="small" />
+          </IconButton>
+          <IconButton aria-label="Open crew link in new tab" onClick={() => window.open(crewLink, "_blank", "noopener")} size="small" sx={linkIconBtnSx}>
+            <OpenInNewRoundedIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+      </Paper>
 
-      {tab === 0 ? <StagesTab /> : <CrewTab />}
+      <CrewTab />
 
       <ChapelFooter />
     </Container>

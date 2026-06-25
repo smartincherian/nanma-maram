@@ -7,6 +7,16 @@ import CrewHome from "./index";
 jest.mock("../../components/AuthProvider", () => ({ useAuth: jest.fn() }));
 jest.mock("../../firebase/auth", () => ({ signOutUser: jest.fn() }));
 jest.mock("../../firebase/video/crew", () => ({ setCrewAvailability: jest.fn() }));
+jest.mock("../../firebase/video/works", () => ({
+  subscribeMyWorks: jest.fn((id, cb) => {
+    cb([]);
+    return jest.fn();
+  }),
+  updateWork: jest.fn(() => Promise.resolve()),
+}));
+jest.mock("../../firebase/video/videos", () => ({
+  getVideo: jest.fn(() => Promise.resolve(null)),
+}));
 jest.mock("../../components/Snackbar", () => {
   const React = require("react");
   return {
@@ -34,7 +44,7 @@ describe("CrewHome", () => {
   it("redirects to join when the user is not crew", () => {
     useAuth.mockReturnValue({ crew: null, isCrew: false, loading: false });
     renderHome();
-    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no open works/i)).not.toBeInTheDocument();
   });
 
   it("renders the crew profile for an active crew member", () => {
@@ -42,7 +52,7 @@ describe("CrewHome", () => {
     renderHome();
     expect(screen.getByText(/Welcome, Person/i)).toBeInTheDocument();
     expect(screen.getByText(/Jesus Loves You/i)).toBeInTheDocument();
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/no open works/i)).toBeInTheDocument();
   });
 
   it("shows the availability toggle as available by default", () => {
@@ -64,6 +74,6 @@ describe("CrewHome", () => {
     useAuth.mockReturnValue({ crew: null, isCrew: false, loading: true });
     renderHome();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
-    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no open works/i)).not.toBeInTheDocument();
   });
 });
