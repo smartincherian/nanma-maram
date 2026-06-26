@@ -22,16 +22,25 @@ import { useTheme } from "@mui/material/styles";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
+import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
+import NoteAddRoundedIcon from "@mui/icons-material/NoteAddRounded";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
-import { subscribeVideo, deleteVideo } from "../../firebase/video/videos";
+import {
+  subscribeVideo,
+  deleteVideo,
+  rejectVideo,
+  reactivateVideo,
+  updateVideoMeta,
+} from "../../firebase/video/videos";
 import { subscribeVideoWorks, updateWork } from "../../firebase/video/works";
 import { listCrew } from "../../firebase/video/crew";
-import { STAGE_STATUS, mergeStepsWithWorks } from "../../utils/videoWorkflow";
+import { STAGE_STATUS, VIDEO_STATUS, mergeStepsWithWorks } from "../../utils/videoWorkflow";
 import { getStepSkills, getStepName } from "../../utils/videoSteps";
 import { amberButtonSx, VIDEO_STATUS_META } from "./ui";
 import StageTimeline from "./components/StageTimeline";
@@ -57,6 +66,12 @@ const VideoDetail = () => {
   const [editStage, setEditStage] = useState(null); // { stageId, status, assigneeId, assigneeName, note }
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectRemarks, setRejectRemarks] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+  const [editingRemarks, setEditingRemarks] = useState(false);
+  const [remarksDraft, setRemarksDraft] = useState("");
+  const [savingRemarks, setSavingRemarks] = useState(false);
 
   useEffect(() => {
     const unsubVideo = subscribeVideo(id, setVideo);
@@ -154,6 +169,47 @@ const VideoDetail = () => {
     showSnackbar("Stage reopened", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
   };
 
+  // Reject the video — leaves the step docs untouched. Any remark typed here is
+  // saved to the same `remarks` field that the Remarks section below shows/edits.
+  const handleReject = async () => {
+    setRejecting(true);
+    try {
+      await rejectVideo(id, { remarks: rejectRemarks }, user?.email || "");
+    } catch (e) {
+      showSnackbar(e?.message || "Could not reject video.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+      setRejecting(false);
+      return;
+    }
+    setRejecting(false);
+    setRejectOpen(false);
+    setRejectRemarks("");
+    showSnackbar("Video rejected", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+  };
+
+  const handleReactivate = async () => {
+    try {
+      await reactivateVideo(id);
+    } catch (e) {
+      showSnackbar(e?.message || "Could not reactivate video.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+      return;
+    }
+    showSnackbar("Video reactivated", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+  };
+
+  const handleSaveRemarks = async () => {
+    setSavingRemarks(true);
+    try {
+      await updateVideoMeta(id, { remarks: remarksDraft.trim() });
+    } catch (e) {
+      showSnackbar(e?.message || "Could not save remarks.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+      setSavingRemarks(false);
+      return;
+    }
+    setSavingRemarks(false);
+    setEditingRemarks(false);
+    showSnackbar("Remarks saved", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+  };
+
   const handleDelete = async () => {
     try {
       await deleteVideo(id);
@@ -193,6 +249,20 @@ const VideoDetail = () => {
           Videos
         </Button>
         <Stack direction="row">
+          {video.status === VIDEO_STATUS.REJECTED ? (
+            <IconButton aria-label="Reactivate video" onClick={handleReactivate} sx={{ color: "#2e7d32" }}><ReplayRoundedIcon /></IconButton>
+          ) : (
+            <IconButton
+              aria-label="Reject video"
+              onClick={() => {
+                setRejectRemarks(video.remarks || "");
+                setRejectOpen(true);
+              }}
+              sx={{ color: "#b3261e" }}
+            >
+              <BlockRoundedIcon />
+            </IconButton>
+          )}
           <IconButton aria-label="Edit video" onClick={() => navigate(`/videos/${id}/edit`)} sx={{ color: "#935100" }}><EditRoundedIcon /></IconButton>
           <IconButton aria-label="Delete video" onClick={() => setConfirmDelete(true)} sx={{ color: "#b3261e" }}><DeleteOutlineRoundedIcon /></IconButton>
         </Stack>
@@ -212,6 +282,38 @@ const VideoDetail = () => {
           <StageTimeline stages={steps} onCycleStage={handleCircleTap} onEditStage={openStageDialog} />
         </Box>
       </Paper>
+
+      {/* Remarks — hidden until added; an "Add remarks" button reveals the field.
+          A remark set at rejection time shows here too. */}
+      {editingRemarks || video.remarks ? (
+        <Paper elevation={0} sx={{ mt: 2.5, p: { xs: 2, sm: 3 }, borderRadius: 4, border: "1px solid rgba(160,103,38,0.16)" }}>
+          <Typography variant="overline" sx={{ letterSpacing: "0.16em", color: "#a16207", fontWeight: 700 }}>Remarks</Typography>
+          {editingRemarks ? (
+            <Stack spacing={1.5} sx={{ mt: 1 }}>
+              <TextField
+                value={remarksDraft}
+                onChange={(e) => setRemarksDraft(e.target.value)}
+                fullWidth
+                multiline
+                minRows={2}
+                autoFocus
+                placeholder="Add a remark…"
+              />
+              <Stack direction="row" justifyContent="flex-end" gap={1}>
+                <Button onClick={() => setEditingRemarks(false)} sx={{ textTransform: "none", fontWeight: 600, color: "#5b6472" }}>Cancel</Button>
+                <Button variant="contained" onClick={handleSaveRemarks} disabled={savingRemarks} sx={{ ...amberButtonSx, px: 3 }}>Save</Button>
+              </Stack>
+            </Stack>
+          ) : (
+            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1} sx={{ mt: 1 }}>
+              <Typography sx={{ color: "#3f3a33", whiteSpace: "pre-wrap", flexGrow: 1, minWidth: 0 }}>{video.remarks}</Typography>
+              <IconButton aria-label="Edit remarks" size="small" onClick={() => { setRemarksDraft(video.remarks || ""); setEditingRemarks(true); }} sx={{ color: "#935100" }}><EditRoundedIcon fontSize="small" /></IconButton>
+            </Stack>
+          )}
+        </Paper>
+      ) : (
+        <Button startIcon={<NoteAddRoundedIcon />} onClick={() => { setRemarksDraft(""); setEditingRemarks(true); }} sx={{ mt: 2.5, textTransform: "none", fontWeight: 700, color: "#935100" }}>Add remarks</Button>
+      )}
 
       {/* Stage update dialog — a bottom sheet on phones, centered dialog above */}
       <Dialog
@@ -284,6 +386,56 @@ const VideoDetail = () => {
           >
             {editStage?.startOnSave ? "Start step" : "Save"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reject confirmation — bottom sheet on phones, with an optional remark */}
+      <Dialog
+        open={rejectOpen}
+        onClose={() => setRejectOpen(false)}
+        fullWidth
+        maxWidth="xs"
+        TransitionComponent={isMobile ? SlideUp : undefined}
+        sx={{ "& .MuiDialog-container": { alignItems: { xs: "flex-end", sm: "center" } } }}
+        PaperProps={{
+          sx: {
+            m: { xs: 0, sm: 4 },
+            width: "100%",
+            maxWidth: { sm: 444 },
+            borderRadius: { xs: "22px 22px 0 0", sm: 4 },
+          },
+        }}
+      >
+        {isMobile ? (
+          <Box sx={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(147,81,0,0.25)", mx: "auto", mt: 1.25 }} />
+        ) : null}
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Reject this video?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            It moves to the Done tab marked rejected. The steps are left untouched and you can reactivate it later.
+          </DialogContentText>
+          <TextField
+            label="Remarks (optional)"
+            value={rejectRemarks}
+            onChange={(e) => setRejectRemarks(e.target.value)}
+            fullWidth
+            multiline
+            minRows={2}
+            placeholder="Reason for rejection…"
+          />
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: { xs: `calc(16px + env(safe-area-inset-bottom))`, sm: 2 },
+            pt: 1,
+            gap: 1,
+            flexDirection: { xs: "column-reverse", sm: "row" },
+            "& > :not(style)": { ml: { xs: 0, sm: 1 } },
+          }}
+        >
+          <Button onClick={() => setRejectOpen(false)} fullWidth={isMobile} sx={{ textTransform: "none", fontWeight: 600, color: "#5b6472", py: { xs: 1.1, sm: 0.5 } }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleReject} disabled={rejecting} fullWidth={isMobile} sx={{ textTransform: "none", fontWeight: 700, px: 3, py: { xs: 1.1, sm: 0.75 } }}>Reject video</Button>
         </DialogActions>
       </Dialog>
 

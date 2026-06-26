@@ -68,6 +68,33 @@ export const updateVideoMeta = async (id, patch) => {
   await updateDoc(videoRef(id), { ...patch, updatedAt: serverTimestamp() });
 };
 
+// Reject a video (e.g. after a content check, or before any processing). Leaves
+// the step/work docs untouched — rejection just flips status. An optional remark
+// is written to the same `remarks` field shown on the detail page; an empty remark
+// is ignored so it never wipes an existing one.
+export const rejectVideo = async (id, { remarks } = {}, by = "") => {
+  const patch = {
+    status: VIDEO_STATUS.REJECTED,
+    rejectedAt: serverTimestamp(),
+    rejectedBy: by,
+    updatedAt: serverTimestamp(),
+  };
+  const trimmed = (remarks || "").trim();
+  if (trimmed) {
+    patch.remarks = trimmed;
+  }
+  await updateDoc(videoRef(id), patch);
+};
+
+// Reverse a rejection — back to Active, clearing the rejection stamp.
+export const reactivateVideo = async (id) => {
+  await updateDoc(videoRef(id), {
+    status: VIDEO_STATUS.ACTIVE,
+    rejectedAt: null,
+    updatedAt: serverTimestamp(),
+  });
+};
+
 export const deleteVideo = async (id) => {
   await deleteWorksForVideo(id);
   await deleteDoc(videoRef(id));

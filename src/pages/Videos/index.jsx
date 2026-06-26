@@ -52,7 +52,8 @@ const VideosDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isDoneVideo = (v) => v.status === VIDEO_STATUS.COMPLETED;
+  const isDoneVideo = (v) =>
+    v.status === VIDEO_STATUS.COMPLETED || v.status === VIDEO_STATUS.REJECTED;
   const filteredVideos = videos.filter((v) =>
     filter === "done" ? isDoneVideo(v) : !isDoneVideo(v)
   );

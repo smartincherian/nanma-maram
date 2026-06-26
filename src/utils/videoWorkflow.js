@@ -11,6 +11,7 @@ export const STAGE_STATUS = {
 export const VIDEO_STATUS = {
   ACTIVE: "active",
   COMPLETED: "completed",
+  REJECTED: "rejected",
 };
 
 // Overlay a video's work docs onto the fixed, ordered step list so the timeline

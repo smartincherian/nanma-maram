@@ -33,5 +33,6 @@ export const STAGE_STATUS_META = {
 export const VIDEO_STATUS_META = {
   [VIDEO_STATUS.ACTIVE]: { label: "Active", color: "#8a4b00", bg: "rgba(214, 123, 31, 0.16)" },
   [VIDEO_STATUS.COMPLETED]: { label: "Completed", color: "#1b5e20", bg: "rgba(46, 125, 50, 0.16)" },
+  [VIDEO_STATUS.REJECTED]: { label: "Rejected", color: "#b3261e", bg: "rgba(179, 38, 30, 0.12)" },
   [VIDEO_STATUS.ON_HOLD]: { label: "On hold", color: "#5b6472", bg: "rgba(91, 100, 114, 0.14)" },
 };

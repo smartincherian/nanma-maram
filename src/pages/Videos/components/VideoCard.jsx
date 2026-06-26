@@ -1,7 +1,7 @@
 import React from "react";
 import { Chip, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import dayjs from "dayjs";
-import { progress } from "../../../utils/videoWorkflow";
+import { progress, VIDEO_STATUS } from "../../../utils/videoWorkflow";
 import { cardSx } from "../ui";
 
 const toMillis = (value) =>
@@ -10,6 +10,7 @@ const toMillis = (value) =>
 const VideoCard = ({ video, onOpen }) => {
   const { done, total } = progress(video);
   const pct = total > 0 ? (done / total) * 100 : 0;
+  const isRejected = video.status === VIDEO_STATUS.REJECTED;
   // Steps run in parallel, so there's no single "current" step to surface here —
   // the card just shows overall progress.
   const isDone = total > 0 && done === total;
@@ -32,13 +33,23 @@ const VideoCard = ({ video, onOpen }) => {
           background: "linear-gradient(180deg, rgba(232,245,233,0.95) 0%, rgba(220,240,222,0.95) 100%)",
           border: "1px solid rgba(46,125,50,0.25)",
         }),
+        ...(isRejected && {
+          background: "linear-gradient(180deg, rgba(253,237,236,0.97) 0%, rgba(250,228,226,0.97) 100%)",
+          border: "1px solid rgba(179,38,30,0.25)",
+        }),
       }}
     >
       <Stack direction="row" alignItems="center" gap={1}>
         <Typography sx={{ flexGrow: 1, fontWeight: 800, color: "#1f2937", fontSize: { xs: "1rem", sm: "1.1rem" }, minWidth: 0 }}>
           {video.title}
         </Typography>
-        {isDone ? (
+        {isRejected ? (
+          <Chip
+            size="small"
+            label="Rejected"
+            sx={{ flexShrink: 0, fontWeight: 800, backgroundColor: "rgba(179,38,30,0.12)", color: "#b3261e" }}
+          />
+        ) : isDone ? (
           uploadedAt ? (
             <Typography
               sx={{ flexShrink: 0, fontWeight: 700, fontSize: "0.8rem", color: "#2e7d32", whiteSpace: "nowrap" }}
@@ -59,7 +70,7 @@ const VideoCard = ({ video, onOpen }) => {
         )}
       </Stack>
 
-      {isDone ? null : (
+      {isDone || isRejected ? null : (
         <LinearProgress
           variant="determinate"
           value={pct}
