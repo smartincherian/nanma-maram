@@ -63,6 +63,7 @@ const VideosDashboard = () => {
         setHasMore(page.hasMore);
       } catch (e) {
         if (id !== requestId.current) return;
+        console.error("Failed to load videos:", e);
         showSnackbar("Could not load videos.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       } finally {
         if (id === requestId.current) setLoadingInitial(false);
@@ -86,6 +87,7 @@ const VideosDashboard = () => {
       setHasMore(page.hasMore);
     } catch (e) {
       if (id !== requestId.current) return;
+      console.error("Failed to load more videos:", e);
       showSnackbar("Could not load more videos.", SNACK_BAR_SEVERITY_TYPES.ERROR);
     } finally {
       if (id === requestId.current) setLoadingMore(false);
