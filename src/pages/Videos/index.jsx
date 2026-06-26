@@ -1,4 +1,10 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Box,
   Button,
@@ -20,43 +26,67 @@ import {
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
 import ChapelFooter from "../../components/ChapelFooter";
-import { listVideos } from "../../firebase/video/videos";
-import { VIDEO_STATUS } from "../../utils/videoWorkflow";
+import { listVideosPage } from "../../firebase/video/videos";
 import { amberButtonSx } from "./ui";
 import VideoCard from "./components/VideoCard";
+
+const PAGE_SIZE = 15;
 
 const VideosDashboard = () => {
   const navigate = useNavigate();
   const { isOwner } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
 
-  const [loading, setLoading] = useState(true);
   const [videos, setVideos] = useState([]);
   const [filter, setFilter] = useState("pending"); // "pending" | "done"
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const cursorRef = useRef(null);
+  // Guards against a slow previous-tab response landing after a tab switch.
+  const requestId = useRef(0);
 
+  // (Re)load the first page whenever the tab changes.
   useEffect(() => {
-    let active = true;
+    const id = ++requestId.current;
+    setLoadingInitial(true);
+    setVideos([]);
+    setHasMore(false);
+    cursorRef.current = null;
     (async () => {
       try {
-        const v = await listVideos();
-        if (active) setVideos(v);
+        const page = await listVideosPage({ filter, pageSize: PAGE_SIZE });
+        if (id !== requestId.current) return;
+        setVideos(page.videos);
+        cursorRef.current = page.cursor;
+        setHasMore(page.hasMore);
       } catch (e) {
+        if (id !== requestId.current) return;
         showSnackbar("Could not load videos.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       } finally {
-        if (active) setLoading(false);
+        if (id === requestId.current) setLoadingInitial(false);
       }
     })();
-    return () => {
-      active = false;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filter]);
 
-  const isDoneVideo = (v) =>
-    v.status === VIDEO_STATUS.COMPLETED || v.status === VIDEO_STATUS.REJECTED;
-  const filteredVideos = videos.filter((v) =>
-    filter === "done" ? isDoneVideo(v) : !isDoneVideo(v)
-  );
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const page = await listVideosPage({
+        filter,
+        pageSize: PAGE_SIZE,
+        cursor: cursorRef.current,
+      });
+      setVideos((prev) => [...prev, ...page.videos]);
+      cursorRef.current = page.cursor;
+      setHasMore(page.hasMore);
+    } catch (e) {
+      showSnackbar("Could not load more videos.", SNACK_BAR_SEVERITY_TYPES.ERROR);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [filter, showSnackbar]);
 
   return (
     <Container maxWidth="sm" sx={{ py: { xs: 2.5, sm: 5 }, px: { xs: 1.5, sm: 3 } }}>
@@ -115,22 +145,39 @@ const VideosDashboard = () => {
         </ToggleButtonGroup>
       </Stack>
 
-      {loading ? (
+      {loadingInitial ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
-      ) : filteredVideos.length === 0 ? (
+      ) : videos.length === 0 ? (
         <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 4, textAlign: "center", border: "1px dashed rgba(160,103,38,0.3)" }}>
           <Typography sx={{ color: "#8a6a36", mb: 2 }}>
-            {videos.length === 0
-              ? "No videos yet."
-              : filter === "done"
-                ? "No completed videos yet."
-                : "No active videos — all caught up!"}
+            {filter === "done"
+              ? "No completed videos yet."
+              : "No active videos — all caught up!"}
           </Typography>
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => navigate("/videos/new")} sx={amberButtonSx}>New video</Button>
         </Paper>
       ) : (
         <Stack spacing={1.5}>
-          {filteredVideos.map((v) => <VideoCard key={v.id} video={v} onOpen={(id) => navigate(`/videos/${id}`)} />)}
+          {videos.map((v) => <VideoCard key={v.id} video={v} onOpen={(id) => navigate(`/videos/${id}`)} />)}
+          {hasMore ? (
+            <Button
+              onClick={loadMore}
+              disabled={loadingMore}
+              variant="outlined"
+              startIcon={loadingMore ? <CircularProgress size={16} color="inherit" /> : null}
+              sx={{
+                mt: 0.5,
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: 3,
+                color: "#935100",
+                borderColor: "rgba(160,103,38,0.4)",
+                "&:hover": { borderColor: "#935100", background: "rgba(147,81,0,0.04)" },
+              }}
+            >
+              {loadingMore ? "Loading…" : "Load more"}
+            </Button>
+          ) : null}
         </Stack>
       )}
 
