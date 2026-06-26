@@ -5,9 +5,14 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
+  orderBy,
+  query,
   serverTimestamp,
+  startAfter,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { DB } from "../../config/firebase";
 import { VIDEO_STATUS } from "../../utils/videoWorkflow";
@@ -15,25 +20,33 @@ import { deleteWorksForVideo } from "./works";
 
 const VIDEOS = "videos";
 
-const toMillis = (value) =>
-  value && typeof value.toMillis === "function" ? value.toMillis() : value || 0;
-
 const videoRef = (id) => doc(DB, VIDEOS, id);
 
-// Active videos first, then most recently created.
-const sortVideos = (videos) =>
-  videos.sort((a, b) => {
-    const aActive = a.status === VIDEO_STATUS.ACTIVE ? 0 : 1;
-    const bActive = b.status === VIDEO_STATUS.ACTIVE ? 0 : 1;
-    if (aActive !== bActive) {
-      return aActive - bActive;
-    }
-    return toMillis(b.createdAt) - toMillis(a.createdAt);
-  });
+const DONE_STATUSES = [VIDEO_STATUS.COMPLETED, VIDEO_STATUS.REJECTED];
 
-export const listVideos = async () => {
-  const snapshot = await getDocs(collection(DB, VIDEOS));
-  return sortVideos(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+// One page of videos for a tab, newest first. `cursor` is the DocumentSnapshot
+// returned by the previous call (null/undefined for the first page). We fetch
+// pageSize + 1 docs so we can report hasMore without a separate count read.
+export const listVideosPage = async ({ filter, pageSize, cursor = null }) => {
+  const statusClause =
+    filter === "done"
+      ? where("status", "in", DONE_STATUSES)
+      : where("status", "==", VIDEO_STATUS.ACTIVE);
+
+  const constraints = [statusClause, orderBy("createdAt", "desc")];
+  if (cursor) constraints.push(startAfter(cursor));
+  constraints.push(limit(pageSize + 1));
+
+  const snapshot = await getDocs(query(collection(DB, VIDEOS), ...constraints));
+  const docs = snapshot.docs;
+  const hasMore = docs.length > pageSize;
+  const pageDocs = hasMore ? docs.slice(0, pageSize) : docs;
+
+  return {
+    videos: pageDocs.map((d) => ({ id: d.id, ...d.data() })),
+    cursor: pageDocs.length ? pageDocs[pageDocs.length - 1] : null,
+    hasMore,
+  };
 };
 
 export const getVideo = async (id) => {
