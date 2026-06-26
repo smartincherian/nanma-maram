@@ -22,7 +22,8 @@ the green "completed" cards.
   the detail page reveals the text area when tapped. Once a remark exists it is
   displayed with an edit affordance.
 - **Rejection UI:** a bottom-sheet confirmation containing an **optional** remarks
-  field (not mandatory).
+  field (not mandatory). A remark entered here writes to the same `remarks` field,
+  so it then shows in the bottom Remarks section and can be edited there afterward.
 - Rejecting/reactivating does **not** touch the step (work) docs.
 
 ## Data layer
