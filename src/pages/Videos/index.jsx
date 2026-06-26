@@ -50,6 +50,7 @@ const VideosDashboard = () => {
   useEffect(() => {
     const id = ++requestId.current;
     setLoadingInitial(true);
+    setLoadingMore(false);
     setVideos([]);
     setHasMore(false);
     cursorRef.current = null;
@@ -71,6 +72,7 @@ const VideosDashboard = () => {
   }, [filter]);
 
   const loadMore = useCallback(async () => {
+    const id = requestId.current;
     setLoadingMore(true);
     try {
       const page = await listVideosPage({
@@ -78,13 +80,15 @@ const VideosDashboard = () => {
         pageSize: PAGE_SIZE,
         cursor: cursorRef.current,
       });
+      if (id !== requestId.current) return;
       setVideos((prev) => [...prev, ...page.videos]);
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
     } catch (e) {
+      if (id !== requestId.current) return;
       showSnackbar("Could not load more videos.", SNACK_BAR_SEVERITY_TYPES.ERROR);
     } finally {
-      setLoadingMore(false);
+      if (id === requestId.current) setLoadingMore(false);
     }
   }, [filter, showSnackbar]);
 
