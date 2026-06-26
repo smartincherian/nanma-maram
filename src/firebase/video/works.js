@@ -113,6 +113,20 @@ export const updateWork = async (videoId, stageId, patch, adminEmail) => {
   });
 };
 
+// Assignee ids that have at least one open (not-done) work — i.e. crew members
+// currently occupied. One-shot read of the whole collection, filtered client-side.
+export const listOccupiedAssigneeIds = async () => {
+  const snap = await getDocs(collection(DB, WORKS));
+  const occupied = new Set();
+  snap.docs.forEach((d) => {
+    const w = d.data();
+    if (w.assigneeId && w.status !== STAGE_STATUS.DONE) {
+      occupied.add(w.assigneeId);
+    }
+  });
+  return occupied;
+};
+
 // Delete every work doc belonging to a video (used when the video is deleted).
 export const deleteWorksForVideo = async (videoId) => {
   const snap = await getDocs(query(collection(DB, WORKS), where("videoId", "==", videoId)));

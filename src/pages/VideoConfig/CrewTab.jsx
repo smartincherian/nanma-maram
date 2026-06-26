@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -25,6 +25,7 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { addCrew, deleteCrew, listCrew, updateCrew } from "../../firebase/video/crew";
+import { listOccupiedAssigneeIds } from "../../firebase/video/works";
 import { getCrewSkillLabel } from "../../utils/crewSkills";
 import SkillsSelect from "../../components/SkillsSelect";
 import { amberButtonSx, cardSx } from "../Videos/ui";
@@ -48,15 +49,34 @@ const SheetHandle = () => (
   <Box sx={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(160,103,38,0.3)", mx: "auto", mb: 1.5 }} />
 );
 
-const availabilityChipSx = (member) => ({
-  fontWeight: 700,
-  backgroundColor: member.available === false ? "rgba(91,100,114,0.14)" : "rgba(46,125,50,0.14)",
-  color: member.available === false ? "#5b6472" : "#2e7d32",
-});
+// Three-state availability used across the dot, the chip and the legend.
+//   unavailable → red, occupied → orange, free (available, no open work) → green.
+const STATUS = {
+  unavailable: { color: "#d32f2f", label: "Not available" },
+  occupied: { color: "#ed6c02", label: "Available · occupied" },
+  free: { color: "#2e9e5b", label: "Available · free" },
+};
+
+const memberStatusKey = (member, occupiedIds) => {
+  if (member.available === false) return "unavailable";
+  return occupiedIds.has(member.id) ? "occupied" : "free";
+};
+
+const availabilityChipSx = (statusKey) => {
+  const color = STATUS[statusKey].color;
+  return {
+    fontWeight: 700,
+    backgroundColor: `${color}22`,
+    color,
+  };
+};
 
 const CrewTab = () => {
   const { showSnackbar } = useContext(SnackbarContext);
   const [crew, setCrew] = useState([]);
+  const [occupiedIds, setOccupiedIds] = useState(() => new Set());
+  const [statusFilter, setStatusFilter] = useState(null); // one status key, or null = all
+  const [skillFilter, setSkillFilter] = useState([]); // skill values; empty = all
   const [dialog, setDialog] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -65,8 +85,9 @@ const CrewTab = () => {
   const reload = async () => {
     try {
       // Soft-deleted (inactive) crew are hidden from the management list.
-      const all = await listCrew();
+      const [all, occupied] = await Promise.all([listCrew(), listOccupiedAssigneeIds()]);
       setCrew(all.filter((m) => m.active !== false));
+      setOccupiedIds(occupied);
     } catch (e) {
       showSnackbar("Could not load crew.", SNACK_BAR_SEVERITY_TYPES.ERROR);
     }
@@ -128,22 +149,90 @@ const CrewTab = () => {
     showSnackbar("Crew member removed", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
   };
 
+  // Single-select status: tapping the active chip clears it.
+  const toggleStatus = (key) => setStatusFilter((cur) => (cur === key ? null : key));
+
+  // Filters combine with AND; a null/empty filter means "no constraint".
+  // Skill match is ANY-of-selected (e.g. "show everyone who can edit").
+  const filtered = useMemo(
+    () =>
+      crew.filter((m) => {
+        if (statusFilter && statusFilter !== memberStatusKey(m, occupiedIds)) return false;
+        if (skillFilter.length && !(m.skills || []).some((s) => skillFilter.includes(s))) return false;
+        return true;
+      }),
+    [crew, occupiedIds, statusFilter, skillFilter]
+  );
+
   return (
     <Box>
+      {/* Filter bar — the colour chips double as the dot legend. Tap to filter
+          by status; the skill picker narrows by what a member can do. */}
+      {crew.length > 0 ? (
+        <Box sx={{ mb: 1.5 }}>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1, mb: 1.25 }}>
+            <Chip
+              size="small"
+              clickable
+              onClick={() => setStatusFilter(null)}
+              label="All"
+              sx={{
+                fontWeight: 700,
+                backgroundColor: statusFilter === null ? "#935100" : "#9351001f",
+                color: statusFilter === null ? "#fff" : "#935100",
+                "&:hover": { backgroundColor: statusFilter === null ? "#935100" : "#93510033" },
+              }}
+            />
+            {Object.entries(STATUS).map(([key, s]) => {
+              const on = statusFilter === key;
+              return (
+                <Chip
+                  key={key}
+                  size="small"
+                  clickable
+                  onClick={() => toggleStatus(key)}
+                  icon={<Box sx={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: on ? "#fff" : s.color, ml: 1 }} />}
+                  label={s.label}
+                  sx={{
+                    fontWeight: 700,
+                    backgroundColor: on ? s.color : `${s.color}1f`,
+                    color: on ? "#fff" : s.color,
+                    "&:hover": { backgroundColor: on ? s.color : `${s.color}33` },
+                  }}
+                />
+              );
+            })}
+          </Stack>
+          <SkillsSelect
+            label="Filter by skill"
+            placeholder="Any skill"
+            value={skillFilter}
+            onChange={setSkillFilter}
+          />
+          <Typography sx={{ fontSize: "0.75rem", color: "#8a6a36", mt: 1 }}>
+            Showing {filtered.length} of {crew.length}
+          </Typography>
+        </Box>
+      ) : null}
+
       <Stack spacing={1.25}>
         {crew.length === 0 ? <Typography sx={{ color: "#8a6a36" }}>No crew yet. Tap “New” to add the team.</Typography> : null}
-        {crew.map((member) => (
+        {crew.length > 0 && filtered.length === 0 ? (
+          <Typography sx={{ color: "#8a6a36" }}>No crew match these filters.</Typography>
+        ) : null}
+        {filtered.map((member) => {
+          const statusKey = memberStatusKey(member, occupiedIds);
+          return (
           <Paper key={member.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 0.5 }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ flexGrow: 1, minWidth: 0 }}>
               <Box
-                aria-label={member.available === false ? "Not available" : "Available"}
+                aria-label={STATUS[statusKey].label}
                 sx={{
                   width: 10,
                   height: 10,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  backgroundColor: member.available === false ? "transparent" : "#2e9e5b",
-                  border: member.available === false ? "2px solid #b6bcc4" : "none",
+                  backgroundColor: STATUS[statusKey].color,
                 }}
               />
               <Typography noWrap sx={{ fontWeight: 700, color: "#3b2a13" }}>{member.name}</Typography>
@@ -152,7 +241,8 @@ const CrewTab = () => {
             <IconButton aria-label={`Edit ${member.name}`} onClick={() => openDialog(member)} sx={{ color: "#935100" }}><EditRoundedIcon /></IconButton>
             <IconButton aria-label={`Delete ${member.name}`} onClick={() => setDeleteTarget(member)} sx={{ color: "#b3261e" }}><DeleteOutlineRoundedIcon /></IconButton>
           </Paper>
-        ))}
+          );
+        })}
       </Stack>
 
       {/* Floating New button — matches the Videos dashboard. */}
@@ -181,7 +271,7 @@ const CrewTab = () => {
           <Stack spacing={1.75}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
               <Typography sx={{ fontWeight: 800, color: "#3b2a13", fontSize: "1.25rem" }}>{viewTarget.name}</Typography>
-              <Chip size="small" label={viewTarget.available === false ? "Not available" : "Available"} sx={availabilityChipSx(viewTarget)} />
+              <Chip size="small" label={STATUS[memberStatusKey(viewTarget, occupiedIds)].label} sx={availabilityChipSx(memberStatusKey(viewTarget, occupiedIds))} />
             </Stack>
 
             <Divider />
