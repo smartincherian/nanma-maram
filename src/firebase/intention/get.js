@@ -11,7 +11,8 @@ export const fetchIntentions = async () => {
         ...doc.data(),
         id: doc.id,
       }))
-      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+      .filter((item) => !item.orgId);
     return response || [];
   } catch (error) {
     console.error("fetchIntentions :", error);
