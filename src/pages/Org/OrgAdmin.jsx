@@ -19,6 +19,9 @@ import { groupVotesByDay } from "../../utils/groupVotesByDay";
 const DAYS_PAGE = 7;
 const VOTERS_PREVIEW = 10;
 
+const adminCodeKey = (slug) =>
+  `orgAdminCode:${String(slug || "").trim().toLowerCase()}`;
+
 const OrgAdmin = () => {
   const { orgSlug } = useParams();
   const [org, setOrg] = useState(null);
@@ -45,6 +48,27 @@ const OrgAdmin = () => {
 
   useEffect(() => { if (org?.name) document.title = `${org.name} — Admin`; }, [org]);
 
+  const loadVotesFor = async (orgObj) => {
+    setLoadingVotes(true);
+    const votes = await listOrgVotes(orgObj.id);
+    setDays(groupVotesByDay(votes));
+    setLoadingVotes(false);
+  };
+
+  // Auto-unlock if a matching admin code was saved on this device.
+  useEffect(() => {
+    if (!org) return;
+    const stored =
+      typeof window !== "undefined"
+        ? localStorage.getItem(adminCodeKey(orgSlug))
+        : null;
+    if (stored && stored === String(org.adminCode || "")) {
+      setUnlocked(true);
+      loadVotesFor(org);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [org, orgSlug]);
+
   const handleUnlock = async () => {
     if (!org) return;
     if (code.trim() !== String(org.adminCode || "")) {
@@ -52,11 +76,20 @@ const OrgAdmin = () => {
       return;
     }
     setError("");
+    if (typeof window !== "undefined") {
+      localStorage.setItem(adminCodeKey(orgSlug), code.trim());
+    }
     setUnlocked(true);
-    setLoadingVotes(true);
-    const votes = await listOrgVotes(org.id);
-    setDays(groupVotesByDay(votes));
-    setLoadingVotes(false);
+    loadVotesFor(org);
+  };
+
+  const handleLock = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(adminCodeKey(orgSlug));
+    }
+    setUnlocked(false);
+    setCode("");
+    setDays([]);
   };
 
   if (loading) {
@@ -105,9 +138,14 @@ const OrgAdmin = () => {
 
   return (
     <Container maxWidth="sm" sx={{ py: { xs: 3, sm: 5 } }}>
-      <Typography variant="h5" sx={{ fontWeight: 800, color: accent, mb: 2 }}>
-        {org.name} — Daily voters
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, flexWrap: "wrap", mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: accent }}>
+          {org.name} — Daily voters
+        </Typography>
+        <Button size="small" onClick={handleLock} sx={{ color: accent, textTransform: "none" }}>
+          Lock
+        </Button>
+      </Box>
       {loadingVotes ? (
         <CircularProgress />
       ) : days.length === 0 ? (
