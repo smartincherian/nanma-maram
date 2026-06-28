@@ -63,6 +63,8 @@ const OrgCounter = () => {
     if (username !== undefined) setOrgVoterName(orgSlug, username);
   }, [orgSlug, username]);
 
+  useEffect(() => { if (org?.name) document.title = org.name; }, [org]);
+
   const onSubmit = async (data) => {
     try {
       const numericValue = Number(data.inputValue);
@@ -86,6 +88,16 @@ const OrgCounter = () => {
       <Box sx={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <CircularProgress />
       </Box>
+    );
+  }
+
+  if (org && counterData && counterData.orgId !== org.id) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 8, textAlign: "center" }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          Prayer not found
+        </Typography>
+      </Container>
     );
   }
 

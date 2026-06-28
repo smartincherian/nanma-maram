@@ -40,6 +40,8 @@ const OrgAdmin = () => {
     };
   }, [orgSlug]);
 
+  useEffect(() => { if (org?.name) document.title = `${org.name} — Admin`; }, [org]);
+
   const handleUnlock = async () => {
     if (!org) return;
     if (code.trim() !== String(org.adminCode || "")) {

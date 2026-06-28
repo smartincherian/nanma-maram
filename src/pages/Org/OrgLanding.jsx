@@ -38,6 +38,8 @@ const OrgLanding = () => {
     };
   }, [orgSlug]);
 
+  useEffect(() => { if (org?.name) document.title = org.name; }, [org]);
+
   if (loading) {
     return (
       <Box sx={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
