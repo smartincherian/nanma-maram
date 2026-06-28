@@ -20,7 +20,7 @@ import {
   listOrgs,
   updateOrg,
 } from "../../firebase/org/orgs";
-import { addIntention } from "../../firebase/intention/add";
+import { addIntention, updateIntention } from "../../firebase/intention/add";
 import { listOrgIntentions } from "../../firebase/intention/get";
 import TextBlock from "./TextBlock";
 import {
@@ -54,6 +54,8 @@ const OrgManage = () => {
   const [form, setForm] = useState(EMPTY_ORG);
   const [intentions, setIntentions] = useState([]);
   const [newIntention, setNewIntention] = useState({ name: "", intention: "", maxCount: 0 });
+  const [editingCounterId, setEditingCounterId] = useState(null);
+  const [counterForm, setCounterForm] = useState({ name: "", intention: "", maxCount: 0 });
 
   const refreshOrgs = async () => setOrgs(await listOrgs());
 
@@ -125,6 +127,36 @@ const OrgManage = () => {
       setIntentions(await listOrgIntentions(editingId));
     } catch (error) {
       showSnackbar(error?.message || "Failed to add counter", SNACK_BAR_SEVERITY_TYPES.ERROR);
+    }
+  };
+
+  const startEditCounter = (item) => {
+    setEditingCounterId(item.id);
+    setCounterForm({
+      name: item.name || "",
+      intention: item.intention || "",
+      maxCount: Number(item.maxCount) || 0,
+    });
+  };
+
+  const cancelEditCounter = () => {
+    setEditingCounterId(null);
+    setCounterForm({ name: "", intention: "", maxCount: 0 });
+  };
+
+  const saveCounterEdit = async () => {
+    try {
+      if (!counterForm.name.trim()) throw new Error("Counter name is required");
+      await updateIntention(editingCounterId, {
+        name: counterForm.name,
+        intention: counterForm.intention,
+        maxCount: Number(counterForm.maxCount) || 0,
+      });
+      showSnackbar("Counter updated", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+      cancelEditCounter();
+      setIntentions(await listOrgIntentions(editingId));
+    } catch (error) {
+      showSnackbar(error?.message || "Failed to update counter", SNACK_BAR_SEVERITY_TYPES.ERROR);
     }
   };
 
@@ -221,12 +253,35 @@ const OrgManage = () => {
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
           <CardContent>
             <Typography sx={{ fontWeight: 700, mb: 2 }}>Counters</Typography>
-            {intentions.map((item) => (
-              <Typography key={item.id} variant="body2" sx={{ mb: 0.5 }}>
-                • {item.name || "Prayer"} — {Number(item.count || 0).toLocaleString("en-IN")}
-                {Number(item.maxCount) > 0 ? ` / ${Number(item.maxCount).toLocaleString("en-IN")}` : ""}
-              </Typography>
-            ))}
+            {intentions.map((item) =>
+              editingCounterId === item.id ? (
+                <Box key={item.id} sx={{ border: "1px solid #eee", borderRadius: 2, p: 2, mb: 1.5 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={5}>
+                      <TextField label="Counter name" fullWidth value={counterForm.name} onChange={(e) => setCounterForm((c) => ({ ...c, name: e.target.value }))} />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField label="Intention text" fullWidth value={counterForm.intention} onChange={(e) => setCounterForm((c) => ({ ...c, intention: e.target.value }))} />
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <TextField label="Target (0 = none)" type="number" fullWidth value={counterForm.maxCount} onChange={(e) => setCounterForm((c) => ({ ...c, maxCount: e.target.value }))} />
+                    </Grid>
+                  </Grid>
+                  <Box sx={{ mt: 1.5, display: "flex", gap: 1 }}>
+                    <Button size="small" variant="contained" onClick={saveCounterEdit}>Save</Button>
+                    <Button size="small" onClick={cancelEditCounter}>Cancel</Button>
+                  </Box>
+                </Box>
+              ) : (
+                <Box key={item.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.5 }}>
+                  <Typography variant="body2">
+                    • {item.name || "Prayer"} — {Number(item.count || 0).toLocaleString("en-IN")}
+                    {Number(item.maxCount) > 0 ? ` / ${Number(item.maxCount).toLocaleString("en-IN")}` : ""}
+                  </Typography>
+                  <Button size="small" onClick={() => startEditCounter(item)}>Edit</Button>
+                </Box>
+              )
+            )}
             <Divider sx={{ my: 2 }} />
             <Grid container spacing={2}>
               <Grid item xs={12} sm={5}>
