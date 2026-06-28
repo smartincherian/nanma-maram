@@ -23,6 +23,7 @@ import {
 import { addIntention, updateIntention } from "../../firebase/intention/add";
 import { listOrgIntentions } from "../../firebase/intention/get";
 import TextBlock from "./TextBlock";
+import CopyLinkButton from "./CopyLinkButton";
 import {
   SNACK_BAR_SEVERITY_TYPES,
   SnackbarContext,
@@ -252,7 +253,10 @@ const OrgManage = () => {
       {editingId ? (
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
           <CardContent>
-            <Typography sx={{ fontWeight: 700, mb: 2 }}>Counters</Typography>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 1 }}>
+              <Typography sx={{ fontWeight: 700 }}>Counters</Typography>
+              {form.slug ? <CopyLinkButton path={`/${form.slug}`} label="Copy organization link" /> : null}
+            </Box>
             {intentions.map((item) =>
               editingCounterId === item.id ? (
                 <Box key={item.id} sx={{ border: "1px solid #eee", borderRadius: 2, p: 2, mb: 1.5 }}>
@@ -278,7 +282,12 @@ const OrgManage = () => {
                     • {item.name || "Prayer"} — {Number(item.count || 0).toLocaleString("en-IN")}
                     {Number(item.maxCount) > 0 ? ` / ${Number(item.maxCount).toLocaleString("en-IN")}` : ""}
                   </Typography>
-                  <Button size="small" onClick={() => startEditCounter(item)}>Edit</Button>
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    {form.slug ? (
+                      <CopyLinkButton path={`/${form.slug}/counter/${item.id}`} label="Copy link" />
+                    ) : null}
+                    <Button size="small" onClick={() => startEditCounter(item)}>Edit</Button>
+                  </Box>
                 </Box>
               )
             )}

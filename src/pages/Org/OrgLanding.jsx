@@ -13,6 +13,7 @@ import {
 import { getOrgBySlug } from "../../firebase/org/orgs";
 import { listOrgIntentions } from "../../firebase/intention/get";
 import TextBlock from "./TextBlock";
+import CopyLinkButton from "./CopyLinkButton";
 
 const OrgLanding = () => {
   const { orgSlug } = useParams();
@@ -70,6 +71,10 @@ const OrgLanding = () => {
         {org.name}
       </Typography>
 
+      <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+        <CopyLinkButton path={`/${org.slug}`} label="Copy organization link" sx={{ color: accent }} />
+      </Box>
+
       {(org.textBlocks || []).map((block) => (
         <TextBlock key={block.id} block={block} />
       ))}
@@ -104,6 +109,13 @@ const OrgLanding = () => {
                     </Typography>
                   </CardContent>
                 </CardActionArea>
+                <Box sx={{ px: 1, pb: 1, display: "flex", justifyContent: "flex-end" }}>
+                  <CopyLinkButton
+                    path={`/${org.slug}/counter/${item.id}`}
+                    label="Copy counter link"
+                    sx={{ color: accent }}
+                  />
+                </Box>
               </Card>
             </Grid>
           ))
