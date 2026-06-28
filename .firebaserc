@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "nanma-maram"
+  },
+  "targets": {
+    "nanma-maram": {
+      "hosting": {
+        "main": ["nanma-maram"],
+        "counter": ["counterprayer"]
+      }
+    }
   }
 }
