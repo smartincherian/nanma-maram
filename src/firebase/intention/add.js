@@ -61,7 +61,7 @@ export const addIntention = async (data) => {
 
 export const addCounter = async (data) => {
   try {
-    const { id = "", value = 0, user = "" } = data;
+    const { id = "", value = 0, user = "", orgId = "" } = data;
     const numericValue = Number(value);
     const intentionRef = doc(ref, id);
 
@@ -122,12 +122,22 @@ export const addCounter = async (data) => {
       };
     });
 
-    const updateRef = collection(DB, appliedValue.logCollectionName);
-    await addDoc(updateRef, {
-      newCount: appliedValue.appliedValue,
-      timestamp: serverTimestamp(),
-      user,
-    });
+    if (orgId) {
+      const votesRef = collection(DB, "orgs", orgId, "votes");
+      await addDoc(votesRef, {
+        intentionId: id,
+        voterName: user,
+        value: appliedValue.appliedValue,
+        timestamp: serverTimestamp(),
+      });
+    } else {
+      const updateRef = collection(DB, appliedValue.logCollectionName);
+      await addDoc(updateRef, {
+        newCount: appliedValue.appliedValue,
+        timestamp: serverTimestamp(),
+        user,
+      });
+    }
     return {
       success: true,
       message:
