@@ -1,4 +1,4 @@
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { DB } from "../../config/firebase";
 
 const ref = collection(DB, "intentions");
@@ -29,6 +29,19 @@ export const fetchUpdates = async () => {
     return response || [];
   } catch (error) {
     console.error("fetchUpdates :", error);
+    throw error;
+  }
+};
+export const listOrgIntentions = async (orgId) => {
+  if (!orgId) return [];
+  try {
+    const q = query(ref, where("orgId", "==", orgId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs
+      .map((doc) => ({ ...doc.data(), id: doc.id }))
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  } catch (error) {
+    console.error("listOrgIntentions :", error);
     throw error;
   }
 };

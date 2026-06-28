@@ -29,6 +29,7 @@ export const addIntention = async (data) => {
       featuredQuote = "",
       showLast5AndTop5 = false,
       collectionName = "",
+      orgId = null,
     } = data;
     const convertedData = {
       name,
@@ -46,6 +47,7 @@ export const addIntention = async (data) => {
       featuredQuote,
       showLast5AndTop5: Boolean(showLast5AndTop5),
       collectionName,
+      orgId: orgId || null,
     };
     if (path === "mother") {
       convertedData.isMotherIntention = true;
