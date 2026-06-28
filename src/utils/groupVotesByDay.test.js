@@ -26,8 +26,18 @@ test("aggregates per voter within a day, highest value first", () => {
   expect(day.totalValue).toBe(28);
   expect(day.totalCount).toBe(3);
   expect(day.voters).toEqual([
-    { name: "Bea", value: 20, count: 1 },
-    { name: "Anna", value: 8, count: 2 },
+    {
+      name: "Bea",
+      value: 20,
+      count: 1,
+      lastTimestampMs: ms("2026-06-27T11:00:00"),
+    },
+    {
+      name: "Anna",
+      value: 8,
+      count: 2,
+      lastTimestampMs: ms("2026-06-27T12:00:00"),
+    },
   ]);
 });
 

@@ -126,18 +126,11 @@ const OrgAdmin = () => {
                 <CardContent>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                     <Typography sx={{ fontWeight: 800, fontSize: "1.05rem" }}>{day.date}</Typography>
-                    <Box sx={{ display: "flex", gap: 0.75 }}>
-                      <Chip
-                        size="small"
-                        label={`Total ${day.totalValue.toLocaleString("en-IN")}`}
-                        sx={{ bgcolor: `${accent}14`, color: accent, fontWeight: 700 }}
-                      />
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={`${day.totalCount} ${day.totalCount === 1 ? "entry" : "entries"}`}
-                      />
-                    </Box>
+                    <Chip
+                      size="small"
+                      label={`Total ${day.totalValue.toLocaleString("en-IN")}`}
+                      sx={{ bgcolor: `${accent}14`, color: accent, fontWeight: 700 }}
+                    />
                   </Box>
 
                   <Divider sx={{ my: 1.25 }} />
@@ -154,7 +147,7 @@ const OrgAdmin = () => {
                       VOTER
                     </Typography>
                     <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700, letterSpacing: "0.06em" }}>
-                      COUNT · ENTRIES
+                      COUNT · TIME
                     </Typography>
                   </Box>
 
@@ -185,9 +178,14 @@ const OrgAdmin = () => {
                         <Typography sx={{ fontWeight: 800, color: accent, fontSize: "1.15rem", lineHeight: 1 }}>
                           {voter.value.toLocaleString("en-IN")}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                          {voter.count} {voter.count === 1 ? "entry" : "entries"}
-                        </Typography>
+                        {voter.lastTimestampMs ? (
+                          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                            {new Date(voter.lastTimestampMs).toLocaleTimeString("en-IN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Typography>
+                        ) : null}
                       </Box>
                     </Box>
                   ))}

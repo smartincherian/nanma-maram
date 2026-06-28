@@ -12,6 +12,7 @@ export const groupVotesByDay = (votes = []) => {
   votes.forEach((vote) => {
     const value = Number(vote?.value || 0);
     const name = String(vote?.voterName || "Anonymous").trim() || "Anonymous";
+    const ts = Number(vote?.timestampMs || 0);
     const dateKey = toLocalDateKey(vote?.timestampMs || Date.now());
 
     if (!days.has(dateKey)) {
@@ -21,9 +22,15 @@ export const groupVotesByDay = (votes = []) => {
     day.totalValue += value;
     day.totalCount += 1;
 
-    const voter = day.voters.get(name) || { name, value: 0, count: 0 };
+    const voter = day.voters.get(name) || {
+      name,
+      value: 0,
+      count: 0,
+      lastTimestampMs: 0,
+    };
     voter.value += value;
     voter.count += 1;
+    if (ts > voter.lastTimestampMs) voter.lastTimestampMs = ts;
     day.voters.set(name, voter);
   });
 
