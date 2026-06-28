@@ -24,6 +24,10 @@ import VideoConfig from "./pages/VideoConfig";
 import CrewJoin from "./pages/CrewJoin";
 import CrewHome from "./pages/CrewHome";
 import CrewProfile from "./pages/CrewProfile";
+import OrgManage from "./pages/Org/OrgManage";
+import OrgLanding from "./pages/Org/OrgLanding";
+import OrgCounter from "./pages/Org/OrgCounter";
+import OrgAdmin from "./pages/Org/OrgAdmin";
 
 function App() {
   return (
@@ -191,6 +195,18 @@ function App() {
               />
             </React.Fragment>
           ))}
+          <Route
+            path="/org-manage"
+            element={
+              <ProtectedRoute>
+                <OrgManage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Org public routes — keep LAST so static routes above win. */}
+          <Route path="/:orgSlug" element={<OrgLanding />} />
+          <Route path="/:orgSlug/counter/:id" element={<OrgCounter />} />
+          <Route path="/:orgSlug/admin" element={<OrgAdmin />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
