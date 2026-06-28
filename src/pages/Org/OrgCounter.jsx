@@ -19,6 +19,7 @@ import { addCounter } from "../../firebase/intention/add";
 import { getOrgBySlug } from "../../firebase/org/orgs";
 import { getOrgVoterName, setOrgVoterName } from "../../utils/orgVoter";
 import CopyLinkButton from "./CopyLinkButton";
+import FormattedText from "./FormattedText";
 import {
   SNACK_BAR_SEVERITY_TYPES,
   SnackbarContext,
@@ -142,8 +143,8 @@ const OrgCounter = () => {
                 backgroundImage: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`,
               }}
             >
-              <Typography sx={{ fontWeight: 700, lineHeight: 1.7 }}>
-                {counterData.intention}
+              <Typography sx={{ fontWeight: 500, lineHeight: 1.7, "& strong": { fontWeight: 800 } }}>
+                <FormattedText text={counterData.intention} />
               </Typography>
             </Box>
           ) : null}

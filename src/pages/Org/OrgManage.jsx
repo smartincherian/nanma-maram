@@ -24,6 +24,7 @@ import { addIntention, updateIntention } from "../../firebase/intention/add";
 import { listOrgIntentions } from "../../firebase/intention/get";
 import TextBlock from "./TextBlock";
 import CopyLinkButton from "./CopyLinkButton";
+import RichTextField from "./RichTextField";
 import {
   SNACK_BAR_SEVERITY_TYPES,
   SnackbarContext,
@@ -265,7 +266,7 @@ const OrgManage = () => {
                       <TextField label="Counter name" fullWidth value={counterForm.name} onChange={(e) => setCounterForm((c) => ({ ...c, name: e.target.value }))} />
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                      <TextField label="Intention text" fullWidth value={counterForm.intention} onChange={(e) => setCounterForm((c) => ({ ...c, intention: e.target.value }))} />
+                      <RichTextField label="Intention text" value={counterForm.intention} onChange={(v) => setCounterForm((c) => ({ ...c, intention: v }))} />
                     </Grid>
                     <Grid item xs={6} sm={3}>
                       <TextField label="Target (0 = none)" type="number" fullWidth value={counterForm.maxCount} onChange={(e) => setCounterForm((c) => ({ ...c, maxCount: e.target.value }))} />
@@ -297,7 +298,7 @@ const OrgManage = () => {
                 <TextField label="Counter name" fullWidth value={newIntention.name} onChange={(e) => setNewIntention((n) => ({ ...n, name: e.target.value }))} />
               </Grid>
               <Grid item xs={12} sm={4}>
-                <TextField label="Intention text" fullWidth value={newIntention.intention} onChange={(e) => setNewIntention((n) => ({ ...n, intention: e.target.value }))} />
+                <RichTextField label="Intention text" value={newIntention.intention} onChange={(v) => setNewIntention((n) => ({ ...n, intention: v }))} />
               </Grid>
               <Grid item xs={6} sm={3}>
                 <TextField label="Target (0 = none)" type="number" fullWidth value={newIntention.maxCount} onChange={(e) => setNewIntention((n) => ({ ...n, maxCount: e.target.value }))} />
