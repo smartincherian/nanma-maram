@@ -18,7 +18,6 @@ import { DB } from "../../config/firebase";
 import { addCounter } from "../../firebase/intention/add";
 import { getOrgBySlug } from "../../firebase/org/orgs";
 import { getOrgVoterName, setOrgVoterName } from "../../utils/orgVoter";
-import CopyLinkButton from "./CopyLinkButton";
 import FormattedText from "./FormattedText";
 import {
   SNACK_BAR_SEVERITY_TYPES,
@@ -115,22 +114,9 @@ const OrgCounter = () => {
           <Typography align="center" sx={{ fontWeight: 800, color: accent, mb: 0.5 }}>
             {org?.name}
           </Typography>
-          <Typography variant="h6" align="center" sx={{ fontWeight: 700, mb: 1 }}>
+          <Typography variant="h6" align="center" sx={{ fontWeight: 700, mb: 2 }}>
             {counterData?.name || "Prayer"}
           </Typography>
-
-          <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap", mb: 2 }}>
-            <CopyLinkButton
-              path={`/${orgSlug}/counter/${id}`}
-              label="Copy counter link"
-              sx={{ color: accent }}
-            />
-            <CopyLinkButton
-              path={`/${orgSlug}`}
-              label="Copy organization link"
-              sx={{ color: accent }}
-            />
-          </Box>
 
           {counterData?.intention ? (
             <Box
