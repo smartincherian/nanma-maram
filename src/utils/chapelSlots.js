@@ -151,6 +151,27 @@ export const formatReservedDays = (days) => {
     .join(", ");
 };
 
+// Combine a date key ("YYYY-MM-DD") and a slot key ("HH:mm") into a single
+// instant marker. Both parts are zero-padded, so plain string comparison
+// orders these markers chronologically — including across midnight.
+export const dateTimeMark = (dateKey, slotKey) => `${dateKey} ${slotKey}`;
+
+// A date-range reservation is usable only when fully filled in and its combined
+// start instant (startDate + startSlotKey) is at or before its combined end
+// instant (endDate + endSlotKey). The combined check is what lets an overnight
+// block like 26th 11:00 PM → 27th 03:00 AM be valid even though, as bare
+// times, the end (03:00) reads as "earlier" than the start (23:00).
+export const isDateReservationComplete = (reservation) => {
+  const reason = String(reservation?.reason || "").trim();
+  const { startDate, endDate, startSlotKey, endSlotKey } = reservation || {};
+  if (!reason || !startDate || !endDate || !startSlotKey || !endSlotKey) {
+    return false;
+  }
+  return (
+    dateTimeMark(startDate, startSlotKey) <= dateTimeMark(endDate, endSlotKey)
+  );
+};
+
 // Map of every admin-reserved start-time key to the name it is reserved for.
 // Reservations are pure event config. Each entry may scope itself to specific
 // weekdays via `days` (dayjs ints); an empty/absent list means every day.
@@ -169,6 +190,28 @@ export const getReservedNames = (event, date) => {
       map[key] = name;
     });
   });
+  // Date-range locks reserve one continuous block of slots, regardless of
+  // weekday. They apply only when a concrete date is known, and are layered last
+  // so a date reservation wins any slot it shares with a weekday reservation.
+  // The block runs from the combined start instant (startDate + startSlotKey) to
+  // the combined end instant (endDate + endSlotKey), inclusive — so it can span
+  // midnight (e.g. an overnight vigil) rather than repeating a window each day.
+  if (date) {
+    const dateKey = formatDateKey(date);
+    const slotKeys = generateSlots(event?.slotMinutes).map((slot) => slot.key);
+    (event?.dateReservations || []).forEach((reservation) => {
+      if (!isDateReservationComplete(reservation)) return;
+      const reason = reservation.reason.trim();
+      const { startDate, endDate, startSlotKey, endSlotKey } = reservation;
+      if (dateKey < startDate || dateKey > endDate) return;
+      const startMark = dateTimeMark(startDate, startSlotKey);
+      const endMark = dateTimeMark(endDate, endSlotKey);
+      slotKeys.forEach((key) => {
+        const mark = dateTimeMark(dateKey, key);
+        if (mark >= startMark && mark <= endMark) map[key] = reason;
+      });
+    });
+  }
   return map;
 };
 

@@ -23,11 +23,18 @@ import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
-import { SLOT_LENGTH_OPTIONS, formatSlotLength } from "../../utils/chapelSlots";
+import {
+  SLOT_LENGTH_OPTIONS,
+  formatSlotLength,
+  isDateReservationComplete,
+} from "../../utils/chapelSlots";
 import { MARIAN, MARIAN_BUTTON_BG } from "../../utils/chapelTheme";
 import { createEvent, updateEvent } from "../../firebase/chapel/events";
 import FieldsBuilder, { makeField, makeNameField } from "./FieldsBuilder";
 import ReservationsBuilder, { makeReservation } from "./ReservationsBuilder";
+import DateReservationsBuilder, {
+  makeDateReservation,
+} from "./DateReservationsBuilder";
 import ImageCropDialog from "./ImageCropDialog";
 
 const DEFAULT_BADGE = "/images/chapel-banner.png";
@@ -64,6 +71,19 @@ const normalizeReservations = (saved) =>
     })
   );
 
+// Rebuild saved date-range reservations into editable entries.
+const normalizeDateReservations = (saved) =>
+  (saved || []).map((r) =>
+    makeDateReservation({
+      id: r.id,
+      reason: r.reason || "",
+      startDate: r.startDate || "",
+      endDate: r.endDate || "",
+      startSlotKey: r.startSlotKey || "",
+      endSlotKey: r.endSlotKey || "",
+    })
+  );
+
 const EventForm = ({ event, onBack, onSaved }) => {
   const isEdit = Boolean(event?.id);
   const { showSnackbar } = useContext(SnackbarContext);
@@ -78,6 +98,9 @@ const EventForm = ({ event, onBack, onSaved }) => {
   const [fields, setFields] = useState(() => normalizeFields(event?.fields));
   const [reservations, setReservations] = useState(() =>
     normalizeReservations(event?.reservations)
+  );
+  const [dateReservations, setDateReservations] = useState(() =>
+    normalizeDateReservations(event?.dateReservations)
   );
   const [image, setImage] = useState(event?.image || "");
   const [cropSrc, setCropSrc] = useState(""); // source for the crop dialog
@@ -117,6 +140,19 @@ const EventForm = ({ event, onBack, onSaved }) => {
       if (!startDate || !endDate) return "Pick a start and end date.";
       if (startDate > endDate) return "Start date must be on or before end date.";
     }
+    // Any date-range reservation the leader started must be fully specified
+    // before saving — a half-filled one is almost certainly a mistake.
+    const partialDateRes = dateReservations.find((r) => {
+      const filled =
+        r.reason.trim() ||
+        r.startDate ||
+        r.endDate ||
+        r.startSlotKey ||
+        r.endSlotKey;
+      return filled && !isDateReservationComplete(r);
+    });
+    if (partialDateRes)
+      return "Finish each date-range reservation: add a reason, then a start date & time before the end date & time.";
     return "";
   };
 
@@ -155,6 +191,17 @@ const EventForm = ({ event, onBack, onSaved }) => {
             days: r.days || [],
           }))
           .filter((r) => r.name && r.slotKeys.length),
+        // Drop incomplete date-range reservations (need reason + dates + times).
+        dateReservations: dateReservations
+          .map((r) => ({
+            id: r.id,
+            reason: r.reason.trim(),
+            startDate: r.startDate,
+            endDate: r.endDate,
+            startSlotKey: r.startSlotKey,
+            endSlotKey: r.endSlotKey,
+          }))
+          .filter(isDateReservationComplete),
       };
 
       if (isEdit) {
@@ -366,6 +413,14 @@ const EventForm = ({ event, onBack, onSaved }) => {
           reservations={reservations}
           slotMinutes={slotMinutes}
           onChange={setReservations}
+        />
+
+        <Divider />
+
+        <DateReservationsBuilder
+          dateReservations={dateReservations}
+          slotMinutes={slotMinutes}
+          onChange={setDateReservations}
         />
 
         <Box>

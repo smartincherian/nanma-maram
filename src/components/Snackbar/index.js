@@ -64,14 +64,17 @@ export const SnackbarProvider = ({ children }) => {
     <SnackbarContext.Provider value={contextValue}>
       {children}
       <Snackbar
-        autoHideDuration={6000}
+        autoHideDuration={2500}
         open={snackbarOpen}
         onClose={hideSnackbar}
         action={action}
         anchorOrigin={position}
-        sx={{ mt: 1 }}
+        // The Snackbar root is a full-width fixed container on mobile; let taps
+        // pass through it so it can't block buttons underneath. The Alert itself
+        // re-enables pointer events so its close button still works.
+        sx={{ mt: 1, pointerEvents: "none" }}
       >
-        <Alert severity={snackbarSeverity}>{snackbarMessage}</Alert>
+        <Alert severity={snackbarSeverity} sx={{ pointerEvents: "auto" }}>{snackbarMessage}</Alert>
       </Snackbar>
     </SnackbarContext.Provider>
   );

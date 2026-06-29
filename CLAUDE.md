@@ -14,9 +14,17 @@ npm test -- --testPathPattern=App  # run one test file
 
 Deploy: `firebase deploy` (targets the `nanma-maram` Firebase project; deploys `build/` to Hosting).
 
+## Testing
+
+Tests are **not required** for a change to be considered done — there is no CI, git hook, or deploy gate running them, and the maintainer verifies UI manually. Do **not** write or update test files unless they're genuinely necessary (e.g. tricky pure business logic with no UI surface) or the user explicitly asks. When you do touch logic that already has tests, keep the existing tests green.
+
 ## Versioning
 
 Bump the `version` in `package.json` (semver) with every meaningful change — patch for fixes/tweaks, minor for new features, major for breaking changes. This version is surfaced in the app footer (`ChapelFooter`) via `REACT_APP_VERSION`, so keeping it current is how releases are identified. Use `npm version patch|minor|major --no-git-tag-version` to bump without creating a git tag.
+
+## Git
+
+Never run `git commit` or `git push` unless the user explicitly tells you to. Make and stage changes, but leave committing to the user.
 
 ## Architecture
 

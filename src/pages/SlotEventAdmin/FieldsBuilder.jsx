@@ -194,4 +194,6 @@ const FieldsBuilder = ({ fields, onChange }) => {
   );
 };
 
-export default FieldsBuilder;
+// Memoised so editing another section of the event form (reservations, dates,
+// etc.) doesn't re-render the fields list — props are stable arrays + setters.
+export default React.memo(FieldsBuilder);

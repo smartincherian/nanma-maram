@@ -1,10 +1,20 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Box,
   Button,
   Chip,
   CircularProgress,
   Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   IconButton,
   Stack,
@@ -17,7 +27,12 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
-import { fetchBookings } from "../../firebase/chapel/bookings";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import { deleteBooking, fetchBookings } from "../../firebase/chapel/bookings";
+import {
+  SnackbarContext,
+  SNACK_BAR_SEVERITY_TYPES,
+} from "../../components/Snackbar";
 import {
   formatDateKey,
   formatDateLabel,
@@ -52,13 +67,84 @@ const downloadFile = (filename, text, mime) => {
   URL.revokeObjectURL(url);
 };
 
+// ---- booking row -----------------------------------------------------------
+
+// One booking row. Memoised so transient sheet state (opening the delete
+// confirmation, or marking one row as deleting) re-renders only the affected
+// row instead of the whole list — which can run into the hundreds per day.
+// All props are referentially stable: `fieldValue`/`onRequestDelete` are
+// useCallback'd and `displayField`/`otherFields` are useMemo'd in the parent.
+const BookingRow = React.memo(function BookingRow({
+  booking,
+  displayField,
+  otherFields,
+  fieldValue,
+  slotLabel,
+  isDeleting,
+  onRequestDelete,
+}) {
+  const name = fieldValue(booking, displayField) || "Guest";
+  return (
+    <Box
+      sx={{
+        px: 1.5,
+        py: 1,
+        borderRadius: 2,
+        border: `1px solid ${MARIAN.border}`,
+        background: booking.locked ? MARIAN.goldSoft : MARIAN.skySoft,
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Typography sx={{ fontWeight: 700, color: MARIAN.deep }}>
+          {name}
+        </Typography>
+        {booking.locked ? (
+          <LockRoundedIcon sx={{ fontSize: 15, color: "#8a6d1f" }} />
+        ) : null}
+        <Typography
+          sx={{
+            ml: "auto",
+            pl: 1,
+            fontSize: "0.6rem",
+            color: MARIAN.inkSoft,
+            opacity: 0.5,
+            fontFamily: "monospace",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {booking.id}
+        </Typography>
+        <IconButton
+          size="small"
+          color="error"
+          disabled={isDeleting}
+          onClick={() => onRequestDelete(booking, name, slotLabel)}
+          aria-label="Delete booking"
+          sx={{ flexShrink: 0 }}
+        >
+          <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </Stack>
+      {otherFields.map((f) => (
+        <Typography key={f.id} variant="body2" sx={{ color: MARIAN.inkSoft }}>
+          {f.label}: {fieldValue(booking, f) || "—"}
+        </Typography>
+      ))}
+    </Box>
+  );
+});
+
 // ---- component -------------------------------------------------------------
 
 const BookingsSheet = ({ open, event, onClose }) => {
   const fullScreen = useMediaQuery("(max-width:599px)");
+  const { showSnackbar } = useContext(SnackbarContext);
   const [dateKey, setDateKey] = useState("");
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  // The booking pending a delete confirmation: { booking, slotLabel } | null.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fields = useMemo(() => event?.fields || [], [event]);
   const displayField = useMemo(
@@ -77,23 +163,50 @@ const BookingsSheet = ({ open, event, onClose }) => {
     }
   }, [open, event]);
 
-  const load = useCallback(async () => {
-    if (!event || !dateKey) return;
-    setLoading(true);
-    try {
-      const rows = await fetchBookings({ eventId: event.id, date: dateKey });
-      setBookings(rows);
-    } catch (err) {
-      console.error("Error fetchBookings:", err);
-      setBookings([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [event, dateKey]);
-
   useEffect(() => {
-    if (open) load();
-  }, [open, load]);
+    if (!open || !event || !dateKey) return undefined;
+    // `active` guards against two races: a superseded fetch (the date changed
+    // before this one resolved) and a teardown (the sheet closed/unmounted
+    // mid-fetch). Either way we drop the late result instead of writing state.
+    let active = true;
+    setLoading(true);
+    fetchBookings({ eventId: event.id, date: dateKey })
+      .then((rows) => {
+        if (active) setBookings(rows);
+      })
+      .catch((err) => {
+        console.error("Error fetchBookings:", err);
+        if (active) setBookings([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open, event, dateKey]);
+
+  // Permanently remove a booking. The sheet reads bookings once (no live
+  // subscription), so drop the deleted row from local state rather than refetch.
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { booking } = pendingDelete;
+    setDeletingId(booking.id);
+    try {
+      await deleteBooking(booking.id);
+      setBookings((prev) => prev.filter((b) => b.id !== booking.id));
+      setPendingDelete(null);
+      showSnackbar("Booking removed.", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+    } catch (err) {
+      console.error("Error deleteBooking:", err);
+      showSnackbar(
+        "Could not remove the booking. Please try again.",
+        SNACK_BAR_SEVERITY_TYPES.ERROR
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const fieldValue = useCallback(
     (booking, field) => {
@@ -103,6 +216,13 @@ const BookingsSheet = ({ open, event, onClose }) => {
       if (field.isDisplayName) return String(booking.displayName || "").trim();
       return "";
     },
+    []
+  );
+
+  // Stable so memoised rows don't re-render when other rows open the dialog.
+  const requestDelete = useCallback(
+    (booking, name, slotLabel) =>
+      setPendingDelete({ booking, name, slotLabel }),
     []
   );
 
@@ -300,51 +420,16 @@ const BookingsSheet = ({ open, event, onClose }) => {
                 </Stack>
                 <Stack spacing={1}>
                   {g.items.map((b) => (
-                    <Box
+                    <BookingRow
                       key={b.id}
-                      sx={{
-                        px: 1.5,
-                        py: 1,
-                        borderRadius: 2,
-                        border: `1px solid ${MARIAN.border}`,
-                        background: b.locked ? MARIAN.goldSoft : MARIAN.skySoft,
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        spacing={0.75}
-                      >
-                        <Typography sx={{ fontWeight: 700, color: MARIAN.deep }}>
-                          {fieldValue(b, displayField) || "Guest"}
-                        </Typography>
-                        {b.locked ? (
-                          <LockRoundedIcon sx={{ fontSize: 15, color: "#8a6d1f" }} />
-                        ) : null}
-                        <Typography
-                          sx={{
-                            ml: "auto",
-                            pl: 1,
-                            fontSize: "0.6rem",
-                            color: MARIAN.inkSoft,
-                            opacity: 0.5,
-                            fontFamily: "monospace",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {b.id}
-                        </Typography>
-                      </Stack>
-                      {otherFields.map((f) => (
-                        <Typography
-                          key={f.id}
-                          variant="body2"
-                          sx={{ color: MARIAN.inkSoft }}
-                        >
-                          {f.label}: {fieldValue(b, f) || "—"}
-                        </Typography>
-                      ))}
-                    </Box>
+                      booking={b}
+                      displayField={displayField}
+                      otherFields={otherFields}
+                      fieldValue={fieldValue}
+                      slotLabel={g.label}
+                      isDeleting={deletingId === b.id}
+                      onRequestDelete={requestDelete}
+                    />
                   ))}
                 </Stack>
               </Box>
@@ -369,6 +454,46 @@ const BookingsSheet = ({ open, event, onClose }) => {
           Done
         </Button>
       </Box>
+
+      {/* Confirm before permanently removing a booking */}
+      <Dialog
+        open={Boolean(pendingDelete)}
+        onClose={() => {
+          // Ignore backdrop/escape dismissal while a delete is in flight.
+          if (!deletingId) setPendingDelete(null);
+        }}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: MARIAN.deep }}>
+          Delete this booking?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingDelete
+              ? `Remove ${pendingDelete.name}'s booking for ${pendingDelete.slotLabel}? This can't be undone.`
+              : ""}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setPendingDelete(null)}
+            disabled={Boolean(deletingId)}
+            sx={{ textTransform: "none", fontWeight: 700, color: MARIAN.inkSoft }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            disabled={Boolean(deletingId)}
+            variant="contained"
+            color="error"
+            startIcon={<DeleteOutlineRoundedIcon />}
+            sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+          >
+            {deletingId ? "Deleting…" : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

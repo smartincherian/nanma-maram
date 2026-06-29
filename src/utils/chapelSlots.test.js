@@ -4,6 +4,7 @@ import {
   formatReservedDays,
   getReservedNames,
   getToday,
+  isDateReservationComplete,
   resolveDateParam,
   splitSlotsByElapsed,
 } from "./chapelSlots";
@@ -141,6 +142,184 @@ describe("getReservedNames", () => {
         "09:00": "Daily",
       });
     });
+  });
+
+  describe("date-range scope", () => {
+    // 30-min slots → keys run 00:00 … 23:30. The block is one continuous span
+    // from (startDate + startSlotKey) to (endDate + endSlotKey), inclusive.
+    const baseEvent = {
+      slotMinutes: 30,
+      dateReservations: [
+        {
+          id: "d1",
+          reason: "Maintenance",
+          startDate: "2026-06-16",
+          endDate: "2026-06-18",
+          startSlotKey: "06:00",
+          endSlotKey: "07:00",
+        },
+      ],
+    };
+
+    it("locks from the start time onward on the start date", () => {
+      const day = getReservedNames(baseEvent, "2026-06-16");
+      expect(day["05:30"]).toBeUndefined();
+      expect(day["06:00"]).toBe("Maintenance");
+      expect(day["23:30"]).toBe("Maintenance");
+    });
+
+    it("locks the entire middle date of a multi-day block", () => {
+      const day = getReservedNames(baseEvent, "2026-06-17");
+      expect(day["00:00"]).toBe("Maintenance");
+      expect(day["12:00"]).toBe("Maintenance");
+      expect(day["23:30"]).toBe("Maintenance");
+    });
+
+    it("locks up to the end time on the end date", () => {
+      const day = getReservedNames(baseEvent, "2026-06-18");
+      expect(day["00:00"]).toBe("Maintenance");
+      expect(day["07:00"]).toBe("Maintenance");
+      expect(day["07:30"]).toBeUndefined();
+    });
+
+    it("spans midnight for an overnight block", () => {
+      // Night Vigil: 26th 11:00 PM → 27th 3:00 AM (end slot key 02:30).
+      const event = {
+        slotMinutes: 30,
+        dateReservations: [
+          {
+            id: "v1",
+            reason: "Night Vigil",
+            startDate: "2026-06-26",
+            endDate: "2026-06-27",
+            startSlotKey: "23:00",
+            endSlotKey: "02:30",
+          },
+        ],
+      };
+      const night = getReservedNames(event, "2026-06-26");
+      expect(night["22:30"]).toBeUndefined();
+      expect(night["23:00"]).toBe("Night Vigil");
+      expect(night["23:30"]).toBe("Night Vigil");
+      expect(night["06:00"]).toBeUndefined();
+
+      const morning = getReservedNames(event, "2026-06-27");
+      expect(morning["00:00"]).toBe("Night Vigil");
+      expect(morning["02:30"]).toBe("Night Vigil");
+      expect(morning["03:00"]).toBeUndefined();
+    });
+
+    it("locks nothing on a date outside the range", () => {
+      expect(getReservedNames(baseEvent, "2026-06-15")).toEqual({});
+      expect(getReservedNames(baseEvent, "2026-06-19")).toEqual({});
+    });
+
+    it("skips date reservations when no date is given", () => {
+      expect(getReservedNames(baseEvent)).toEqual({});
+    });
+
+    it("ignores entries with a blank reason or incomplete bounds", () => {
+      const event = {
+        slotMinutes: 30,
+        dateReservations: [
+          {
+            id: "d1",
+            reason: "   ",
+            startDate: "2026-06-16",
+            endDate: "2026-06-18",
+            startSlotKey: "06:00",
+            endSlotKey: "07:00",
+          },
+          {
+            id: "d2",
+            reason: "No end date",
+            startDate: "2026-06-16",
+            endDate: "",
+            startSlotKey: "06:00",
+            endSlotKey: "07:00",
+          },
+          {
+            id: "d3",
+            reason: "Start after end",
+            startDate: "2026-06-18",
+            endDate: "2026-06-16",
+            startSlotKey: "06:00",
+            endSlotKey: "07:00",
+          },
+        ],
+      };
+      expect(getReservedNames(event, "2026-06-17")).toEqual({});
+    });
+
+    it("lets a date reservation win over a weekday reservation on the same slot", () => {
+      const event = {
+        slotMinutes: 30,
+        reservations: [
+          { id: "r1", name: "Weekly", slotKeys: ["06:00"], days: [] },
+        ],
+        dateReservations: [
+          {
+            id: "d1",
+            reason: "Special",
+            startDate: "2026-06-16",
+            endDate: "2026-06-18",
+            startSlotKey: "06:00",
+            endSlotKey: "06:00",
+          },
+        ],
+      };
+      expect(getReservedNames(event, "2026-06-17")["06:00"]).toBe("Special");
+    });
+  });
+});
+
+describe("isDateReservationComplete", () => {
+  const valid = {
+    reason: "Retreat",
+    startDate: "2026-06-16",
+    endDate: "2026-06-18",
+    startSlotKey: "06:00",
+    endSlotKey: "07:00",
+  };
+
+  it("accepts a fully specified, correctly ordered reservation", () => {
+    expect(isDateReservationComplete(valid)).toBe(true);
+  });
+
+  it("accepts an overnight block where the end time reads earlier", () => {
+    expect(
+      isDateReservationComplete({
+        reason: "Night Vigil",
+        startDate: "2026-06-26",
+        endDate: "2026-06-27",
+        startSlotKey: "23:00",
+        endSlotKey: "02:30",
+      })
+    ).toBe(true);
+  });
+
+  it("accepts a single-slot block (same date and time)", () => {
+    expect(
+      isDateReservationComplete({ ...valid, endDate: "2026-06-16", startSlotKey: "06:00", endSlotKey: "06:00" })
+    ).toBe(true);
+  });
+
+  it("rejects when the combined start is after the combined end", () => {
+    // Same day, end time before start time.
+    expect(
+      isDateReservationComplete({ ...valid, endDate: "2026-06-16", startSlotKey: "23:00", endSlotKey: "02:30" })
+    ).toBe(false);
+    // Start date after end date.
+    expect(
+      isDateReservationComplete({ ...valid, startDate: "2026-06-18", endDate: "2026-06-16" })
+    ).toBe(false);
+  });
+
+  it("rejects missing reason or bounds", () => {
+    expect(isDateReservationComplete({ ...valid, reason: "  " })).toBe(false);
+    expect(isDateReservationComplete({ ...valid, startDate: "" })).toBe(false);
+    expect(isDateReservationComplete({ ...valid, endSlotKey: "" })).toBe(false);
+    expect(isDateReservationComplete(undefined)).toBe(false);
   });
 });
 

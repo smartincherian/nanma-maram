@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Container,
@@ -28,6 +28,13 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { DB } from "../../config/firebase";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import CopyLinkButton from "../Org/CopyLinkButton";
+import {
+  SNACK_BAR_SEVERITY_TYPES,
+  SnackbarContext,
+} from "../../components/Snackbar";
 
 function PrayerForm({ path = "" }) {
   const { id } = useParams();
@@ -57,11 +64,13 @@ function PrayerForm({ path = "" }) {
     },
   });
   const navigate = useNavigate();
+  const { showSnackbar } = useContext(SnackbarContext);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(isEditMode);
   const [existingIntention, setExistingIntention] = useState(null);
   const [countActionValue, setCountActionValue] = useState(1);
   const [countActionLoading, setCountActionLoading] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
   const selectedPrayerType = watch("prayerType");
   const effectivePath = isEditMode
     ? existingIntention?.isMotherIntention
@@ -124,11 +133,17 @@ function PrayerForm({ path = "" }) {
 
       if (isEditMode) {
         await updateIntention(id, updatedData);
+        // Stay on the page and refresh the side-by-side preview so edits are
+        // visible immediately, instead of bouncing back to the list.
+        setPreviewKey((k) => k + 1);
+        showSnackbar("Intention updated", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
       } else {
-        await addIntention(updatedData);
+        const newId = await addIntention(updatedData);
+        showSnackbar("Intention created", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
+        // Land on the edit page so the side-by-side preview is available
+        // immediately after creating.
+        navigate(newId ? `/intention-edit/${newId}` : "/intention-list");
       }
-
-      navigate("/intention-list");
     } catch (error) {
       console.error("Error onSubmit :", error);
       alert(error?.message || "Something went wrong");
@@ -178,7 +193,9 @@ function PrayerForm({ path = "" }) {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
+    <Container maxWidth="lg" sx={{ mt: 8 }}>
+      <Grid container spacing={3} alignItems="flex-start">
+        <Grid item xs={12} md={7}>
       <Paper elevation={6} sx={{ p: 4, borderRadius: 4 }}>
         <Typography variant="h4" component="h1" align="center" gutterBottom>
           {effectivePath === "mother"
@@ -199,6 +216,40 @@ function PrayerForm({ path = "" }) {
             ? "Update the fields below to edit this prayer intention."
             : "Please fill out the form below to submit your prayer intention."}
         </Typography>
+        {isEditMode ? (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1,
+              flexWrap: "wrap",
+              p: 1.5,
+              mt: 1,
+              borderRadius: 2,
+              bgcolor: "#f5f7ff",
+              border: "1px solid rgba(25,118,210,0.18)",
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Counter page
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <CopyLinkButton path={`/counter/${id}`} />
+              <Button
+                size="small"
+                component="a"
+                href={`/counter/${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                startIcon={<OpenInNewIcon fontSize="small" />}
+                sx={{ textTransform: "none" }}
+              >
+                Preview
+              </Button>
+            </Box>
+          </Box>
+        ) : null}
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit)}
@@ -558,6 +609,66 @@ function PrayerForm({ path = "" }) {
           </Stack>
         </Paper>
       ) : null}
+        </Grid>
+        <Grid item xs={12} md={5}>
+          <Box sx={{ position: { md: "sticky" }, top: { md: 24 } }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: "#9ca3af", letterSpacing: "0.08em" }}>
+                LIVE PREVIEW
+              </Typography>
+              {isEditMode ? (
+                <Button
+                  size="small"
+                  startIcon={<RefreshIcon fontSize="small" />}
+                  onClick={() => setPreviewKey((k) => k + 1)}
+                  sx={{ textTransform: "none" }}
+                >
+                  Refresh
+                </Button>
+              ) : null}
+            </Box>
+            {isEditMode ? (
+              <>
+                <Paper variant="outlined" sx={{ borderRadius: 4, overflow: "hidden", height: "82vh" }}>
+                  <iframe
+                    key={previewKey}
+                    title="Counter preview"
+                    src={`/counter/${id}`}
+                    style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                  />
+                </Paper>
+                <Typography variant="caption" sx={{ color: "#9ca3af", mt: 0.75, display: "block" }}>
+                  Shows the saved counter. Click Update to save — the preview refreshes automatically.
+                </Typography>
+              </>
+            ) : (
+              <Paper
+                variant="outlined"
+                sx={{
+                  borderRadius: 4,
+                  height: "82vh",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  p: 4,
+                  bgcolor: "#fafafa",
+                }}
+              >
+                <Box>
+                  <Typography sx={{ fontWeight: 700, color: "#9ca3af" }}>
+                    Preview appears after you save
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "#9ca3af", mt: 1 }}>
+                    Fill in the form and click Submit. You'll move to the edit page with the live
+                    counter page shown here.
+                  </Typography>
+                </Box>
+              </Paper>
+            )}
+          </Box>
+        </Grid>
+      </Grid>
     </Container>
   );
 }

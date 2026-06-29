@@ -3,6 +3,10 @@ import ChurchIcon from "@mui/icons-material/Church";
 import AddIcon from "@mui/icons-material/Add";
 import FilterVintageIcon from "@mui/icons-material/FilterVintage";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import ApartmentIcon from "@mui/icons-material/Apartment";
+import MovieFilterIcon from "@mui/icons-material/MovieFilter";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import {
   Box,
   Button,
@@ -14,12 +18,15 @@ import {
 } from "@mui/material";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../components/AuthProvider";
+import { signOutUser } from "../../firebase/auth";
 
 const sacredPattern =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23b8892d' stroke-width='1.4' stroke-linecap='round' opacity='0.44'%3E%3Cpath d='M120 28v48M96 52h48'/%3E%3Cpath d='M120 164c-13-23-44-31-44-62 0-20 16-34 36-34 10 0 17 4 24 12 7-8 14-12 24-12 20 0 36 14 36 34 0 31-31 39-44 62'/%3E%3Ccircle cx='120' cy='120' r='76' stroke-dasharray='2.6 8'/%3E%3Ccircle cx='120' cy='120' r='96' stroke-dasharray='1.8 7'/%3E%3Cpath d='M30 120c18-16 42-24 66-24'/%3E%3Cpath d='M210 120c-18-16-42-24-66-24'/%3E%3Cpath d='M56 188c8-20 24-34 44-42'/%3E%3Cpath d='M184 188c-8-20-24-34-44-42'/%3E%3C/g%3E%3C/svg%3E\")";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user, isSuperAdmin } = useAuth();
 
   const menuItems = [
     {
@@ -64,7 +71,27 @@ const Home = () => {
       icon: <AccountCircleIcon />,
       path: "/register-prayer-bank",
     },
-  ];
+    {
+      text: "Media",
+      helper: "Track media production stages & crew",
+      icon: <MovieFilterIcon />,
+      path: "/admin/media",
+    },
+    {
+      text: "Manage Admins",
+      helper: "Add, edit, or remove admin accounts",
+      icon: <ManageAccountsIcon />,
+      path: "/admins",
+      superAdminOnly: true,
+    },
+    {
+      text: "Manage Organizations",
+      helper: "Create & manage organizations",
+      icon: <ApartmentIcon />,
+      path: "/org-manage",
+      superAdminOnly: true,
+    },
+  ].filter((item) => !item.superAdminOnly || isSuperAdmin);
 
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 5 } }}>
@@ -120,6 +147,30 @@ const Home = () => {
             pointerEvents: "none",
           }}
         />
+        {user ? (
+          <Box
+            sx={{
+              position: "relative",
+              display: "flex",
+              justifyContent: "flex-end",
+              mb: { xs: 1, sm: 0 },
+            }}
+          >
+            <Button
+              size="small"
+              onClick={() => signOutUser()}
+              startIcon={<LogoutRoundedIcon />}
+              sx={{
+                textTransform: "none",
+                color: "#8a6a36",
+                fontWeight: 600,
+                borderRadius: 2,
+              }}
+            >
+              Sign out
+            </Button>
+          </Box>
+        ) : null}
         <Stack
           spacing={1.5}
           sx={{ position: "relative", alignItems: "center", textAlign: "center", mb: 4 }}
