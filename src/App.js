@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import React from "react";
 import "./App.css";
 import { SnackbarProvider } from "./components/Snackbar";
@@ -17,6 +17,25 @@ import Register from "./pages/PrayerBank/Register";
 import SlotEventAdmin from "./pages/SlotEventAdmin";
 import SlotBookingEvent from "./pages/SlotBookingEvent";
 import Admins from "./pages/Admins";
+import VideosDashboard from "./pages/Videos";
+import VideoForm from "./pages/Videos/VideoForm";
+import VideoDetail from "./pages/Videos/VideoDetail";
+import VideoConfig from "./pages/VideoConfig";
+import CrewJoin from "./pages/CrewJoin";
+import CrewHome from "./pages/CrewHome";
+import CrewProfile from "./pages/CrewProfile";
+import OrgManage from "./pages/Org/OrgManage";
+import OrgCounterForm from "./pages/Org/OrgCounterForm";
+import OrgLanding from "./pages/Org/OrgLanding";
+import OrgCounter from "./pages/Org/OrgCounter";
+import OrgAdmin from "./pages/Org/OrgAdmin";
+
+// Carries the legacy /videos/:id (and /edit) id through to the canonical
+// /admin/media/:id path so old deep links keep working.
+function RedirectMedia({ edit = false }) {
+  const { id } = useParams();
+  return <Navigate to={`/admin/media/${id}${edit ? "/edit" : ""}`} replace />;
+}
 
 function App() {
   return (
@@ -57,6 +76,57 @@ function App() {
             }
           />
           <Route path="/counter/:id" element={<Counter />} />
+          <Route
+            path="/admin/media"
+            element={
+              <ProtectedRoute>
+                <VideosDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/media/new"
+            element={
+              <ProtectedRoute>
+                <VideoForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/media/:id"
+            element={
+              <ProtectedRoute>
+                <VideoDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/media/:id/edit"
+            element={
+              <ProtectedRoute>
+                <VideoForm />
+              </ProtectedRoute>
+            }
+          />
+          {/* Legacy /videos URLs redirect to the canonical /admin/media paths. */}
+          <Route path="/videos" element={<Navigate to="/admin/media" replace />} />
+          <Route path="/videos/new" element={<Navigate to="/admin/media/new" replace />} />
+          <Route path="/videos/:id" element={<RedirectMedia />} />
+          <Route path="/videos/:id/edit" element={<RedirectMedia edit />} />
+          <Route
+            path="/video-config"
+            element={
+              <ProtectedRoute>
+                <VideoConfig />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/crew/join" element={<CrewJoin />} />
+          <Route path="/crew/profile" element={<CrewProfile />} />
+          <Route path="/crew" element={<CrewHome />} />
+          {/* Same page; the extra param opens the work sheet as a modal route so
+              the browser/Android back button dismisses it and works are deep-linkable. */}
+          <Route path="/crew/work/:videoId/:stageId" element={<CrewHome />} />
           <Route
             path="/admins"
             element={
@@ -141,6 +211,34 @@ function App() {
               />
             </React.Fragment>
           ))}
+          <Route
+            path="/org-manage"
+            element={
+              <ProtectedRoute>
+                <OrgManage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/org-manage/:orgId/counter/new"
+            element={
+              <ProtectedRoute>
+                <OrgCounterForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/org-manage/:orgId/counter/:counterId/edit"
+            element={
+              <ProtectedRoute>
+                <OrgCounterForm />
+              </ProtectedRoute>
+            }
+          />
+          {/* Org public routes — keep LAST so static routes above win. */}
+          <Route path="/:orgSlug" element={<OrgLanding />} />
+          <Route path="/:orgSlug/counter/:id" element={<OrgCounter />} />
+          <Route path="/:orgSlug/admin" element={<OrgAdmin />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
