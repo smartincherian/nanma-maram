@@ -38,10 +38,11 @@ import {
   reactivateVideo,
   updateVideoMeta,
 } from "../../firebase/video/videos";
-import { subscribeVideoWorks, updateWork } from "../../firebase/video/works";
+import { subscribeVideoWorks, updateWork, listOpenWorkCountsByAssignee } from "../../firebase/video/works";
 import { listCrew } from "../../firebase/video/crew";
 import { STAGE_STATUS, VIDEO_STATUS, mergeStepsWithWorks } from "../../utils/videoWorkflow";
-import { getStepSkills, getStepName } from "../../utils/videoSteps";
+import { getStepSkillsForType, getStepName } from "../../utils/videoSteps";
+import { MEDIA_BASE, getMediaTypeLabel } from "../../utils/mediaTypes";
 import { amberButtonSx, VIDEO_STATUS_META } from "./ui";
 import StageTimeline from "./components/StageTimeline";
 import CrewPicker from "./components/CrewPicker";
@@ -63,6 +64,7 @@ const VideoDetail = () => {
   const [video, setVideo] = useState(undefined); // undefined = loading, null = missing
   const [works, setWorks] = useState([]);
   const [crew, setCrew] = useState([]);
+  const [workCounts, setWorkCounts] = useState({}); // assigneeId -> open work count
   const [editStage, setEditStage] = useState(null); // { stageId, status, assigneeId, assigneeName, note }
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -82,6 +84,14 @@ const VideoDetail = () => {
       unsubWorks();
     };
   }, [id]);
+
+  // Refresh each crew member's current workload whenever the assignee dialog
+  // opens, so the picker's occupied/free state reflects the latest assignments.
+  const stageDialogOpen = editStage !== null;
+  useEffect(() => {
+    if (!stageDialogOpen) return;
+    listOpenWorkCountsByAssignee().then(setWorkCounts).catch(() => {});
+  }, [stageDialogOpen]);
 
   // The 7 fixed steps with each step's live work overlaid; assignee names are
   // resolved from the crew list since work docs only store the id.
@@ -116,7 +126,7 @@ const VideoDetail = () => {
     }
     const next = stage.status === STAGE_STATUS.IN_PROGRESS ? STAGE_STATUS.DONE : STAGE_STATUS.PENDING;
     try {
-      await updateWork(id, stage.stageId, { status: next }, user?.email || "");
+      await updateWork(id, stage.stageId, { status: next }, user?.email || "", "admin");
     } catch (e) {
       showSnackbar(e?.message || "Could not update step.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       return;
@@ -141,7 +151,7 @@ const VideoDetail = () => {
       patch.status = STAGE_STATUS.IN_PROGRESS;
     }
     try {
-      await updateWork(id, editStage.stageId, patch, user?.email || "");
+      await updateWork(id, editStage.stageId, patch, user?.email || "", "admin");
     } catch (e) {
       showSnackbar(e?.message || "Could not update stage.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       setSaving(false);
@@ -158,7 +168,7 @@ const VideoDetail = () => {
   const handleReopenStage = async () => {
     setSaving(true);
     try {
-      await updateWork(id, editStage.stageId, { status: STAGE_STATUS.IN_PROGRESS }, user?.email || "");
+      await updateWork(id, editStage.stageId, { status: STAGE_STATUS.IN_PROGRESS }, user?.email || "", "admin");
     } catch (e) {
       showSnackbar(e?.message || "Could not reopen stage.", SNACK_BAR_SEVERITY_TYPES.ERROR);
       setSaving(false);
@@ -218,7 +228,7 @@ const VideoDetail = () => {
       return;
     }
     showSnackbar("Video deleted", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
-    navigate("/videos");
+    navigate(MEDIA_BASE);
   };
 
   if (video === undefined) {
@@ -233,7 +243,7 @@ const VideoDetail = () => {
     return (
       <Container maxWidth="sm" sx={{ py: 6, textAlign: "center" }}>
         <Typography variant="h6" sx={{ fontWeight: 800, color: "#6f3a00", mb: 2 }}>Video not found</Typography>
-        <Button variant="contained" onClick={() => navigate("/videos")} sx={amberButtonSx}>Back to videos</Button>
+        <Button variant="contained" onClick={() => navigate(MEDIA_BASE)} sx={amberButtonSx}>Back to media</Button>
       </Container>
     );
   }
@@ -245,8 +255,8 @@ const VideoDetail = () => {
   return (
     <Container maxWidth="sm" sx={{ py: { xs: 2.5, sm: 5 }, px: { xs: 1.5, sm: 3 } }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Button startIcon={<ArrowBackRoundedIcon />} onClick={() => navigate("/videos")} sx={{ textTransform: "none", color: "#6f3a00", fontWeight: 600, minWidth: 0 }}>
-          Videos
+        <Button startIcon={<ArrowBackRoundedIcon />} onClick={() => navigate(MEDIA_BASE)} sx={{ textTransform: "none", color: "#6f3a00", fontWeight: 600, minWidth: 0 }}>
+          Media
         </Button>
         <Stack direction="row">
           {video.status === VIDEO_STATUS.REJECTED ? (
@@ -263,7 +273,7 @@ const VideoDetail = () => {
               <BlockRoundedIcon />
             </IconButton>
           )}
-          <IconButton aria-label="Edit video" onClick={() => navigate(`/videos/${id}/edit`)} sx={{ color: "#935100" }}><EditRoundedIcon /></IconButton>
+          <IconButton aria-label="Edit video" onClick={() => navigate(`${MEDIA_BASE}/${id}/edit`)} sx={{ color: "#935100" }}><EditRoundedIcon /></IconButton>
           <IconButton aria-label="Delete video" onClick={() => setConfirmDelete(true)} sx={{ color: "#b3261e" }}><DeleteOutlineRoundedIcon /></IconButton>
         </Stack>
       </Stack>
@@ -273,6 +283,9 @@ const VideoDetail = () => {
         <Stack direction="row" gap={0.75} sx={{ flexWrap: "wrap" }}>
           <Chip size="small" label={statusMeta.label} sx={{ backgroundColor: statusMeta.bg, color: statusMeta.color, fontWeight: 700 }} />
           <Chip size="small" label={`${done}/${total} done`} sx={{ backgroundColor: "rgba(46,125,50,0.12)", color: "#1b5e20", fontWeight: 700 }} />
+          {getMediaTypeLabel(video.type) ? (
+            <Chip size="small" label={getMediaTypeLabel(video.type)} sx={{ backgroundColor: "rgba(160,103,38,0.12)", color: "#935100", fontWeight: 700 }} />
+          ) : null}
         </Stack>
       </Paper>
 
@@ -341,7 +354,8 @@ const VideoDetail = () => {
             <CrewPicker
               crew={crew}
               value={editStage?.assigneeId || null}
-              relevantSkills={editStage ? getStepSkills(editStage.stageId) : []}
+              relevantSkills={editStage ? getStepSkillsForType(editStage.stageId, video.type) : []}
+              workCounts={workCounts}
               onChange={(assigneeId, assigneeName) => setEditStage((s) => ({ ...s, assigneeId, assigneeName }))}
             />
             <TextField

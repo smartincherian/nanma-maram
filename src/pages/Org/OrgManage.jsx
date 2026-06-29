@@ -1,18 +1,24 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Chip,
   Container,
   Divider,
   Grid,
   IconButton,
-  MenuItem,
+  Paper,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
+import ApartmentIcon from "@mui/icons-material/Apartment";
+import AddIcon from "@mui/icons-material/Add";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { useAuth } from "../../components/AuthProvider";
 import {
   createOrg,
@@ -20,44 +26,89 @@ import {
   listOrgs,
   updateOrg,
 } from "../../firebase/org/orgs";
-import { addIntention, updateIntention } from "../../firebase/intention/add";
 import { listOrgIntentions } from "../../firebase/intention/get";
-import TextBlock from "./TextBlock";
 import CopyLinkButton from "./CopyLinkButton";
-import RichTextField from "./RichTextField";
 import {
   SNACK_BAR_SEVERITY_TYPES,
   SnackbarContext,
 } from "../../components/Snackbar";
 
-const EMPTY_BLOCK = () => ({
-  id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-  text: "",
-  variant: "paragraph",
-  color: "#311b45",
-  fontSize: "1rem",
-  weight: 500,
-  align: "center",
-});
+const ACCENT = "#4a148c";
+const GOLD = "#a16207";
+
+const SectionLabel = ({ children, sx }) => (
+  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, ...sx }}>
+    <Box sx={{ width: 4, height: 18, borderRadius: 2, bgcolor: GOLD }} />
+    <Typography sx={{ fontWeight: 800, letterSpacing: "0.01em", color: "#311b45" }}>
+      {children}
+    </Typography>
+  </Box>
+);
+
+const cardSx = {
+  borderRadius: 4,
+  mb: 3,
+  border: "1px solid rgba(74,20,140,0.12)",
+  boxShadow: "0 16px 44px rgba(49,27,69,0.08)",
+};
+
+// A single shareable link with its full URL, a copy button, and an open-in-tab.
+const LinkRow = ({ label, path }) => {
+  const url = `${window.location.origin}${path}`;
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 1,
+        px: 1.5,
+        py: 1.25,
+        mb: 1,
+        borderRadius: 2.5,
+        bgcolor: "#faf8ff",
+        border: "1px solid rgba(74,20,140,0.08)",
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="body2" sx={{ fontWeight: 700, color: "#311b45" }}>
+          {label}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{ color: "#6b7280", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          {url}
+        </Typography>
+      </Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+        <CopyLinkButton path={path} sx={{ color: ACCENT, fontWeight: 600 }} />
+        <Tooltip title="Open in new tab" arrow>
+          <IconButton size="small" component="a" href={url} target="_blank" rel="noopener noreferrer" sx={{ color: ACCENT }}>
+            <OpenInNewIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    </Box>
+  );
+};
 
 const EMPTY_ORG = {
   slug: "",
   name: "",
   adminCode: "",
   primaryColor: "#4a148c",
-  textBlocks: [],
 };
 
 const OrgManage = () => {
   const { isSuperAdmin, loading } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orgs, setOrgs] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_ORG);
   const [intentions, setIntentions] = useState([]);
-  const [newIntention, setNewIntention] = useState({ name: "", intention: "", maxCount: 0 });
-  const [editingCounterId, setEditingCounterId] = useState(null);
-  const [counterForm, setCounterForm] = useState({ name: "", intention: "", maxCount: 0 });
 
   const refreshOrgs = async () => setOrgs(await listOrgs());
 
@@ -74,28 +125,28 @@ const OrgManage = () => {
       name: org.name || "",
       adminCode: org.adminCode || "",
       primaryColor: org.primaryColor || "#4a148c",
-      textBlocks: org.textBlocks || [],
     });
     setIntentions(await listOrgIntentions(id));
   };
+
+  // Auto-open an org when arriving with ?org=ID (e.g. returning from the
+  // counter editor), so the right org and its counter list stay in view.
+  useEffect(() => {
+    const orgParam = searchParams.get("org");
+    if (isSuperAdmin && orgParam && orgParam !== editingId) {
+      loadOrgForEdit(orgParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin, searchParams]);
 
   const resetForm = () => {
     setEditingId(null);
     setForm(EMPTY_ORG);
     setIntentions([]);
+    if (searchParams.get("org")) setSearchParams({}, { replace: true });
   };
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-
-  const setBlock = (index, key, value) =>
-    setForm((f) => ({
-      ...f,
-      textBlocks: f.textBlocks.map((b, i) => (i === index ? { ...b, [key]: value } : b)),
-    }));
-
-  const addBlock = () => setForm((f) => ({ ...f, textBlocks: [...f.textBlocks, EMPTY_BLOCK()] }));
-  const removeBlock = (index) =>
-    setForm((f) => ({ ...f, textBlocks: f.textBlocks.filter((_, i) => i !== index) }));
 
   const saveOrg = async () => {
     try {
@@ -114,81 +165,116 @@ const OrgManage = () => {
     }
   };
 
-  const addCounterToOrg = async () => {
-    try {
-      if (!editingId) throw new Error("Save the organization first");
-      if (!newIntention.name.trim()) throw new Error("Counter name is required");
-      await addIntention({
-        name: newIntention.name,
-        intention: newIntention.intention,
-        maxCount: Number(newIntention.maxCount) || 0,
-        orgId: editingId,
-      });
-      showSnackbar("Counter added", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
-      setNewIntention({ name: "", intention: "", maxCount: 0 });
-      setIntentions(await listOrgIntentions(editingId));
-    } catch (error) {
-      showSnackbar(error?.message || "Failed to add counter", SNACK_BAR_SEVERITY_TYPES.ERROR);
-    }
-  };
-
-  const startEditCounter = (item) => {
-    setEditingCounterId(item.id);
-    setCounterForm({
-      name: item.name || "",
-      intention: item.intention || "",
-      maxCount: Number(item.maxCount) || 0,
-    });
-  };
-
-  const cancelEditCounter = () => {
-    setEditingCounterId(null);
-    setCounterForm({ name: "", intention: "", maxCount: 0 });
-  };
-
-  const saveCounterEdit = async () => {
-    try {
-      if (!counterForm.name.trim()) throw new Error("Counter name is required");
-      await updateIntention(editingCounterId, {
-        name: counterForm.name,
-        intention: counterForm.intention,
-        maxCount: Number(counterForm.maxCount) || 0,
-      });
-      showSnackbar("Counter updated", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
-      cancelEditCounter();
-      setIntentions(await listOrgIntentions(editingId));
-    } catch (error) {
-      showSnackbar(error?.message || "Failed to update counter", SNACK_BAR_SEVERITY_TYPES.ERROR);
-    }
-  };
-
   if (loading) return null;
   if (!isSuperAdmin) {
     return (
-      <Container maxWidth="sm" sx={{ py: 8, textAlign: "center" }}>
-        <Typography variant="h6">Access denied</Typography>
+      <Container maxWidth="sm" sx={{ py: 10, textAlign: "center" }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: "#311b45" }}>
+          Access denied
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#6b7280", mt: 1 }}>
+          This area is reserved for superadmins.
+        </Typography>
       </Container>
     );
   }
 
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, sm: 5 } }}>
-      <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>Organizations</Typography>
-
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 3 }}>
-        {orgs.map((org) => (
-          <Button key={org.id} size="small" variant={editingId === org.id ? "contained" : "outlined"} onClick={() => loadOrgForEdit(org.id)}>
-            {org.name}
-          </Button>
-        ))}
-        <Button size="small" color="secondary" onClick={resetForm}>+ New</Button>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+        <Box
+          sx={{
+            width: 52,
+            height: 52,
+            borderRadius: "16px",
+            display: "grid",
+            placeItems: "center",
+            color: "#fff",
+            background: `linear-gradient(135deg, #6d28d9 0%, ${ACCENT} 100%)`,
+            boxShadow: "0 12px 26px rgba(74,20,140,0.32)",
+            flexShrink: 0,
+          }}
+        >
+          <ApartmentIcon />
+        </Box>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: "#2e1065", lineHeight: 1.2 }}>
+            Organizations
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#6b7280" }}>
+            Create and manage organizations, branding, and prayer counters.
+          </Typography>
+        </Box>
       </Box>
 
-      <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
-        <CardContent>
-          <Typography sx={{ fontWeight: 700, mb: 2 }}>
-            {editingId ? "Edit organization" : "New organization"}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1.5,
+          borderRadius: 3,
+          mb: 3,
+          display: "flex",
+          gap: 1,
+          flexWrap: "wrap",
+          alignItems: "center",
+          border: "1px solid rgba(74,20,140,0.16)",
+          bgcolor: "rgba(250,247,255,0.7)",
+        }}
+      >
+        {orgs.length === 0 ? (
+          <Typography variant="body2" sx={{ color: "#9ca3af", px: 1, py: 0.5 }}>
+            No organizations yet — create your first one.
           </Typography>
+        ) : (
+          orgs.map((org) => {
+            const selected = editingId === org.id;
+            return (
+              <Chip
+                key={org.id}
+                label={org.name}
+                clickable
+                onClick={() => loadOrgForEdit(org.id)}
+                variant={selected ? "filled" : "outlined"}
+                sx={
+                  selected
+                    ? {
+                        bgcolor: ACCENT,
+                        color: "#fff",
+                        fontWeight: 700,
+                        "&:hover": { bgcolor: "#5b21b6" },
+                      }
+                    : {
+                        color: ACCENT,
+                        borderColor: "rgba(74,20,140,0.3)",
+                        fontWeight: 600,
+                      }
+                }
+              />
+            );
+          })
+        )}
+        <Box sx={{ flexGrow: 1 }} />
+        <Button
+          size="small"
+          startIcon={<AddIcon />}
+          onClick={resetForm}
+          sx={{
+            textTransform: "none",
+            fontWeight: 700,
+            color: editingId ? GOLD : "#fff",
+            bgcolor: editingId ? "transparent" : ACCENT,
+            borderRadius: 2,
+            px: 1.5,
+            "&:hover": { bgcolor: editingId ? "rgba(161,98,7,0.08)" : "#5b21b6" },
+          }}
+        >
+          New
+        </Button>
+      </Paper>
+
+      <Card elevation={0} sx={cardSx}>
+        <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <SectionLabel>{editingId ? "Edit organization" : "New organization"}</SectionLabel>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField label="Name" fullWidth value={form.name} onChange={(e) => setField("name", e.target.value)} />
@@ -200,111 +286,132 @@ const OrgManage = () => {
               <TextField label="Admin code" fullWidth value={form.adminCode} onChange={(e) => setField("adminCode", e.target.value)} />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Primary color" fullWidth value={form.primaryColor} onChange={(e) => setField("primaryColor", e.target.value)} helperText="hex e.g. #4a148c" />
+              <TextField
+                label="Primary color"
+                fullWidth
+                value={form.primaryColor}
+                onChange={(e) => setField("primaryColor", e.target.value)}
+                helperText="hex e.g. #4a148c"
+                InputProps={{
+                  startAdornment: (
+                    <Box
+                      sx={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: "6px",
+                        mr: 1,
+                        flexShrink: 0,
+                        bgcolor: form.primaryColor || "transparent",
+                        border: "1px solid rgba(0,0,0,0.15)",
+                      }}
+                    />
+                  ),
+                }}
+              />
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 3 }} />
-          <Typography sx={{ fontWeight: 700, mb: 1 }}>Text blocks</Typography>
-          {form.textBlocks.map((block, index) => (
-            <Box key={block.id} sx={{ border: "1px solid #eee", borderRadius: 2, p: 2, mb: 2 }}>
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <IconButton size="small" onClick={() => removeBlock(index)} aria-label="Remove block">
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-              <TextField label="Text" fullWidth multiline minRows={2} value={block.text} onChange={(e) => setBlock(index, "text", e.target.value)} sx={{ mb: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6} sm={3}>
-                  <TextField select label="Variant" fullWidth value={block.variant} onChange={(e) => setBlock(index, "variant", e.target.value)}>
-                    {["heading", "subheading", "paragraph", "verse"].map((v) => (
-                      <MenuItem key={v} value={v}>{v}</MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <TextField label="Color" fullWidth value={block.color} onChange={(e) => setBlock(index, "color", e.target.value)} />
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <TextField label="Font size" fullWidth value={block.fontSize} onChange={(e) => setBlock(index, "fontSize", e.target.value)} helperText="e.g. 1.25rem" />
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <TextField select label="Align" fullWidth value={block.align} onChange={(e) => setBlock(index, "align", e.target.value)}>
-                    {["left", "center", "right"].map((a) => (
-                      <MenuItem key={a} value={a}>{a}</MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-              </Grid>
-              <Box sx={{ mt: 2, p: 1, bgcolor: "#faf7ff", borderRadius: 1 }}>
-                <Typography variant="caption" color="text.secondary">Preview</Typography>
-                <TextBlock block={block} />
-              </Box>
-            </Box>
-          ))}
-          <Button onClick={addBlock} size="small">+ Add text block</Button>
-
           <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
-            <Button variant="contained" onClick={saveOrg}>{editingId ? "Update" : "Create"}</Button>
-            {editingId ? <Button onClick={resetForm}>Done</Button> : null}
+            <Button
+              variant="contained"
+              onClick={saveOrg}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                px: 3,
+                borderRadius: 2,
+                background: `linear-gradient(135deg, #6d28d9 0%, ${ACCENT} 100%)`,
+                boxShadow: "0 10px 22px rgba(74,20,140,0.28)",
+                "&:hover": { background: "linear-gradient(135deg, #5b21b6 0%, #3b0f70 100%)" },
+              }}
+            >
+              {editingId ? "Update" : "Create"}
+            </Button>
+            {editingId ? (
+              <Button onClick={resetForm} sx={{ textTransform: "none", fontWeight: 600, color: "#6b7280" }}>
+                Done
+              </Button>
+            ) : null}
           </Box>
         </CardContent>
       </Card>
 
+      {editingId && form.slug ? (
+        <Card elevation={0} sx={cardSx}>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+            <SectionLabel>Links</SectionLabel>
+            <LinkRow label="Organization page" path={`/${form.slug}`} />
+            <LinkRow label="Admin page" path={`/${form.slug}/admin`} />
+          </CardContent>
+        </Card>
+      ) : null}
+
       {editingId ? (
-        <Card variant="outlined" sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, flexWrap: "wrap", gap: 1 }}>
-              <Typography sx={{ fontWeight: 700 }}>Counters</Typography>
-              {form.slug ? <CopyLinkButton path={`/${form.slug}`} label="Copy organization link" /> : null}
-            </Box>
-            {intentions.map((item) =>
-              editingCounterId === item.id ? (
-                <Box key={item.id} sx={{ border: "1px solid #eee", borderRadius: 2, p: 2, mb: 1.5 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={5}>
-                      <TextField label="Counter name" fullWidth value={counterForm.name} onChange={(e) => setCounterForm((c) => ({ ...c, name: e.target.value }))} />
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
-                      <RichTextField label="Intention text" value={counterForm.intention} onChange={(v) => setCounterForm((c) => ({ ...c, intention: v }))} />
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <TextField label="Target (0 = none)" type="number" fullWidth value={counterForm.maxCount} onChange={(e) => setCounterForm((c) => ({ ...c, maxCount: e.target.value }))} />
-                    </Grid>
-                  </Grid>
-                  <Box sx={{ mt: 1.5, display: "flex", gap: 1 }}>
-                    <Button size="small" variant="contained" onClick={saveCounterEdit}>Save</Button>
-                    <Button size="small" onClick={cancelEditCounter}>Cancel</Button>
-                  </Box>
-                </Box>
-              ) : (
-                <Box key={item.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.5 }}>
-                  <Typography variant="body2">
-                    • {item.name || "Prayer"} — {Number(item.count || 0).toLocaleString("en-IN")}
+        <Card elevation={0} sx={{ ...cardSx, mb: 0 }}>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+            <SectionLabel>Counters</SectionLabel>
+            {intentions.length === 0 ? (
+              <Typography variant="body2" sx={{ color: "#9ca3af", mb: 1 }}>
+                No counters yet. Add one below.
+              </Typography>
+            ) : null}
+            {intentions.map((item) => (
+              <Box
+                key={item.id}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 1,
+                  px: 1.5,
+                  py: 1.25,
+                  mb: 1,
+                  borderRadius: 2.5,
+                  bgcolor: "#faf8ff",
+                  border: "1px solid rgba(74,20,140,0.08)",
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: "#311b45", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {item.name || "Prayer"}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "#6b7280" }}>
+                    {Number(item.count || 0).toLocaleString("en-IN")}
                     {Number(item.maxCount) > 0 ? ` / ${Number(item.maxCount).toLocaleString("en-IN")}` : ""}
                   </Typography>
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    {form.slug ? (
-                      <CopyLinkButton path={`/${form.slug}/counter/${item.id}`} label="Copy link" />
-                    ) : null}
-                    <Button size="small" onClick={() => startEditCounter(item)}>Edit</Button>
-                  </Box>
                 </Box>
-              )
-            )}
-            <Divider sx={{ my: 2 }} />
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={5}>
-                <TextField label="Counter name" fullWidth value={newIntention.name} onChange={(e) => setNewIntention((n) => ({ ...n, name: e.target.value }))} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <RichTextField label="Intention text" value={newIntention.intention} onChange={(v) => setNewIntention((n) => ({ ...n, intention: v }))} />
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <TextField label="Target (0 = none)" type="number" fullWidth value={newIntention.maxCount} onChange={(e) => setNewIntention((n) => ({ ...n, maxCount: e.target.value }))} />
-              </Grid>
-            </Grid>
-            <Button sx={{ mt: 2 }} variant="outlined" onClick={addCounterToOrg}>Add counter</Button>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+                  {form.slug ? (
+                    <CopyLinkButton path={`/${form.slug}/counter/${item.id}`} label="Copy link" />
+                  ) : null}
+                  <Button
+                    size="small"
+                    startIcon={<EditOutlinedIcon fontSize="small" />}
+                    onClick={() => navigate(`/org-manage/${editingId}/counter/${item.id}/edit`)}
+                    sx={{ textTransform: "none", fontWeight: 600, color: ACCENT }}
+                  >
+                    Edit
+                  </Button>
+                </Box>
+              </Box>
+            ))}
+            <Divider sx={{ my: 2.5 }} />
+            <Button
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: 2,
+                px: 2.5,
+                borderColor: "rgba(74,20,140,0.4)",
+                color: ACCENT,
+                "&:hover": { borderColor: ACCENT, bgcolor: "rgba(74,20,140,0.04)" },
+              }}
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => navigate(`/org-manage/${editingId}/counter/new`)}
+            >
+              Add counter
+            </Button>
           </CardContent>
         </Card>
       ) : null}

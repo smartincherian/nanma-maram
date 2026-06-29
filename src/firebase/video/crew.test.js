@@ -87,12 +87,16 @@ describe("crew accounts", () => {
       });
     });
 
-    it("throws when name, phone, email, or skills are missing", async () => {
+    it("throws when name, email, or skills are missing (phone is optional)", async () => {
       await expect(registerCrew({ email: "", name: "A", phone: "1", skills: ["Shorts"] })).rejects.toThrow();
       await expect(registerCrew({ email: "a@b.com", name: " ", phone: "1", skills: ["Shorts"] })).rejects.toThrow();
-      await expect(registerCrew({ email: "a@b.com", name: "A", phone: " ", skills: ["Shorts"] })).rejects.toThrow();
       await expect(registerCrew({ email: "a@b.com", name: "A", phone: "1", skills: [] })).rejects.toThrow();
       expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it("registers when phone is empty", async () => {
+      await registerCrew({ email: "a@b.com", name: "A", phone: "", skills: ["Shorts"] });
+      expect(setDoc).toHaveBeenCalled();
     });
   });
 
@@ -168,11 +172,15 @@ describe("crew accounts", () => {
       expect(written).not.toHaveProperty("active");
     });
 
-    it("throws when name, phone, or skills are missing", async () => {
+    it("throws when name or skills are missing (phone is optional)", async () => {
       await expect(updateCrewProfile("id", { name: " ", phone: "1", skills: ["Shorts"] })).rejects.toThrow();
-      await expect(updateCrewProfile("id", { name: "A", phone: " ", skills: ["Shorts"] })).rejects.toThrow();
       await expect(updateCrewProfile("id", { name: "A", phone: "1", skills: [] })).rejects.toThrow();
       expect(updateDoc).not.toHaveBeenCalled();
+    });
+
+    it("updates when phone is empty", async () => {
+      await updateCrewProfile("id", { name: "A", phone: "", skills: ["Shorts"] });
+      expect(updateDoc).toHaveBeenCalled();
     });
   });
 });

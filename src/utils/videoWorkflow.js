@@ -34,6 +34,10 @@ export const mergeStepsWithWorks = (works = [], nameForId = () => null) => {
       note: w?.note || "",
       dueDate: w?.dueDate || null,
       completedAt: w?.completedAt || null,
+      statusChangedAt: w?.statusChangedAt || null,
+      updatedAt: w?.updatedAt || null,
+      lastUpdatedFrom: w?.lastUpdatedFrom || "",
+      noteUpdatedAt: w?.noteUpdatedAt || null,
     };
   });
 };

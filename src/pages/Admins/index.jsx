@@ -25,6 +25,7 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { useAuth } from "../../components/AuthProvider";
+import { isSuperAdminEmail } from "../../config/roles";
 import {
   addAdmin,
   deleteAdmin,
@@ -36,7 +37,7 @@ const EMPTY_FORM = { email: "", name: "", contact: "" };
 
 const Admins = () => {
   const navigate = useNavigate();
-  const { user, isOwner } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
 
   const [admins, setAdmins] = useState([]);
@@ -161,6 +162,38 @@ const Admins = () => {
     showSnackbar("Admin removed", SNACK_BAR_SEVERITY_TYPES.SUCCESS);
   };
 
+  // Managing admins is a superadmin-only feature. The Home tile is hidden for
+  // regular admins; this guards direct URL access too.
+  if (!isSuperAdmin) {
+    return (
+      <Container maxWidth="sm" sx={{ py: { xs: 4, sm: 6 } }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            borderRadius: 4,
+            textAlign: "center",
+            border: "1px solid rgba(160, 103, 38, 0.16)",
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#6f3a00", mb: 1 }}>
+            Super admins only
+          </Typography>
+          <Typography sx={{ color: "#5b6472", mb: 3 }}>
+            Only super admin accounts can manage admins.
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => navigate("/")}
+            sx={{ textTransform: "none", fontWeight: 700 }}
+          >
+            Back to Home
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, sm: 5 } }}>
       <Stack
@@ -228,9 +261,9 @@ const Admins = () => {
                   <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>
                     {admin.name || "—"}
                   </Typography>
-                  {admin.role === "owner" ? (
+                  {isSuperAdminEmail(admin.email) ? (
                     <Chip
-                      label="Owner"
+                      label="Super Admin"
                       size="small"
                       sx={{
                         fontWeight: 700,
@@ -264,7 +297,7 @@ const Admins = () => {
                 <EditRoundedIcon />
               </IconButton>
 
-              {isOwner && !isSelf ? (
+              {!isSelf ? (
                 <IconButton
                   aria-label={`Delete ${admin.email}`}
                   onClick={() => setDeleteTarget(admin)}

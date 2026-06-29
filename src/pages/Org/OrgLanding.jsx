@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import { getOrgBySlug } from "../../firebase/org/orgs";
 import { listOrgIntentions } from "../../firebase/intention/get";
-import TextBlock from "./TextBlock";
 import CopyLinkButton from "./CopyLinkButton";
 
 const OrgLanding = () => {
@@ -74,10 +73,6 @@ const OrgLanding = () => {
       <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
         <CopyLinkButton path={`/${org.slug}`} label="Copy organization link" sx={{ color: accent }} />
       </Box>
-
-      {(org.textBlocks || []).map((block) => (
-        <TextBlock key={block.id} block={block} />
-      ))}
 
       <Grid container spacing={2} sx={{ mt: 2 }}>
         {intentions.length === 0 ? (

@@ -8,11 +8,12 @@ import { onAuthStateChanged } from "firebase/auth";
 import { AUTH } from "../../config/firebase";
 import { fetchAdmin } from "../../firebase/auth";
 import { fetchCrewByEmail } from "../../firebase/video/crew";
+import { isSuperAdminEmail } from "../../config/roles";
 
 const AuthContext = createContext({
   user: null,
   isAllowed: false,
-  isOwner: false,
+  isSuperAdmin: false,
   crew: null,
   isCrew: false,
   loading: true,
@@ -23,7 +24,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAllowed, setIsAllowed] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [crew, setCrew] = useState(null);
   const [isCrew, setIsCrew] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,7 +35,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!nextUser) {
         setIsAllowed(false);
-        setIsOwner(false);
+        setIsSuperAdmin(false);
         setCrew(null);
         setIsCrew(false);
         setLoading(false);
@@ -47,13 +48,13 @@ export const AuthProvider = ({ children }) => {
           fetchCrewByEmail(nextUser.email),
         ]);
         setIsAllowed(admin !== null);
-        setIsOwner(admin?.role === "owner");
+        setIsSuperAdmin(admin !== null && isSuperAdminEmail(nextUser.email));
         setCrew(crewRecord);
         setIsCrew(crewRecord !== null && crewRecord.active !== false);
       } catch (error) {
         console.error("auth lookup :", error);
         setIsAllowed(false);
-        setIsOwner(false);
+        setIsSuperAdmin(false);
         setCrew(null);
         setIsCrew(false);
       } finally {
@@ -74,7 +75,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAllowed, isOwner, crew, isCrew, loading, refreshCrew }}>
+    <AuthContext.Provider value={{ user, isAllowed, isSuperAdmin, crew, isCrew, loading, refreshCrew }}>
       {children}
     </AuthContext.Provider>
   );

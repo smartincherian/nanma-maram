@@ -1,7 +1,8 @@
 import React from "react";
-import { Chip, LinearProgress, Paper, Stack, Typography } from "@mui/material";
+import { Box, Chip, LinearProgress, Paper, Stack, Tooltip, Typography } from "@mui/material";
 import dayjs from "dayjs";
 import { progress, VIDEO_STATUS } from "../../../utils/videoWorkflow";
+import { getMediaTypeLabel, getMediaTypeLetter } from "../../../utils/mediaTypes";
 import { cardSx } from "../ui";
 
 const toMillis = (value) =>
@@ -18,6 +19,7 @@ const VideoCard = ({ video, onOpen }) => {
   // completion time is effectively the uploaded date. Fall back to updatedAt for
   // videos completed before completedAt was stamped.
   const uploadedAt = isDone ? toMillis(video.completedAt) || toMillis(video.updatedAt) : 0;
+  const typeLetter = getMediaTypeLetter(video.type);
 
   return (
     <Paper
@@ -40,6 +42,28 @@ const VideoCard = ({ video, onOpen }) => {
       }}
     >
       <Stack direction="row" alignItems="center" gap={1}>
+        {typeLetter ? (
+          <Tooltip title={getMediaTypeLabel(video.type)} arrow>
+            <Box
+              sx={{
+                flexShrink: 0,
+                width: 22,
+                height: 22,
+                borderRadius: "7px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.72rem",
+                fontWeight: 800,
+                color: "#935100",
+                backgroundColor: "rgba(214,123,31,0.16)",
+                border: "1px solid rgba(147,81,0,0.18)",
+              }}
+            >
+              {typeLetter}
+            </Box>
+          </Tooltip>
+        ) : null}
         <Typography sx={{ flexGrow: 1, fontWeight: 800, color: "#1f2937", fontSize: { xs: "1rem", sm: "1.1rem" }, minWidth: 0 }}>
           {video.title}
         </Typography>

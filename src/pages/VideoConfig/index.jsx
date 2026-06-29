@@ -5,9 +5,9 @@ import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import GroupAddRoundedIcon from "@mui/icons-material/GroupAddRounded";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../components/AuthProvider";
 import { SnackbarContext, SNACK_BAR_SEVERITY_TYPES } from "../../components/Snackbar";
 import ChapelFooter from "../../components/ChapelFooter";
+import { MEDIA_BASE } from "../../utils/mediaTypes";
 import CrewTab from "./CrewTab";
 
 const linkIconBtnSx = {
@@ -18,7 +18,6 @@ const linkIconBtnSx = {
 
 const VideoConfig = () => {
   const navigate = useNavigate();
-  const { isOwner } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
 
   // Shareable invite link. Pointing at /crew/join means an already-signed-in crew
@@ -35,33 +34,15 @@ const VideoConfig = () => {
     }
   };
 
-  if (!isOwner) {
-    return (
-      <Container maxWidth="sm" sx={{ py: { xs: 4, sm: 6 } }}>
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, textAlign: "center", border: "1px solid rgba(160, 103, 38, 0.16)" }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, color: "#6f3a00", mb: 1 }}>
-            Owners only
-          </Typography>
-          <Typography sx={{ color: "#5b6472", mb: 3 }}>
-            Only owner accounts can manage the crew.
-          </Typography>
-          <Button variant="contained" onClick={() => navigate("/videos")} sx={{ textTransform: "none", fontWeight: 700 }}>
-            Back to Videos
-          </Button>
-        </Paper>
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="sm" sx={{ py: { xs: 2.5, sm: 5 }, px: { xs: 1.5, sm: 3 } }}>
       <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
         <Button
           startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => navigate("/videos")}
+          onClick={() => navigate(MEDIA_BASE)}
           sx={{ textTransform: "none", color: "#6f3a00", fontWeight: 600, minWidth: 0 }}
         >
-          Videos
+          Media
         </Button>
       </Stack>
 

@@ -24,9 +24,9 @@ import {
   SnackbarContext,
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
-import { useAuth } from "../../components/AuthProvider";
 import ChapelFooter from "../../components/ChapelFooter";
 import { listVideosPage } from "../../firebase/video/videos";
+import { MEDIA_BASE } from "../../utils/mediaTypes";
 import { amberButtonSx } from "./ui";
 import VideoCard from "./components/VideoCard";
 
@@ -34,7 +34,6 @@ const PAGE_SIZE = 15;
 
 const VideosDashboard = () => {
   const navigate = useNavigate();
-  const { isOwner } = useAuth();
   const { showSnackbar } = useContext(SnackbarContext);
 
   const [videos, setVideos] = useState([]);
@@ -100,16 +99,14 @@ const VideosDashboard = () => {
         <Button startIcon={<ArrowBackRoundedIcon />} onClick={() => navigate("/")} sx={{ textTransform: "none", color: "#6f3a00", fontWeight: 600, minWidth: 0 }}>
           Home
         </Button>
-        {isOwner ? (
-          <Button startIcon={<GroupsRoundedIcon />} onClick={() => navigate("/video-config")} sx={{ textTransform: "none", fontWeight: 700, color: "#935100", minWidth: 0 }}>
-            Crew
-          </Button>
-        ) : null}
+        <Button startIcon={<GroupsRoundedIcon />} onClick={() => navigate("/video-config")} sx={{ textTransform: "none", fontWeight: 700, color: "#935100", minWidth: 0 }}>
+          Crew
+        </Button>
       </Stack>
 
       <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} sx={{ mb: 2 }}>
         <Typography sx={{ fontWeight: 800, color: "#1f2937", fontSize: { xs: "1.5rem", sm: "2rem" }, minWidth: 0 }}>
-          Videos
+          Media
         </Typography>
         <ToggleButtonGroup
           exclusive
@@ -157,14 +154,14 @@ const VideosDashboard = () => {
         <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 4, textAlign: "center", border: "1px dashed rgba(160,103,38,0.3)" }}>
           <Typography sx={{ color: "#8a6a36", mb: 2 }}>
             {filter === "done"
-              ? "No completed videos yet."
-              : "No active videos — all caught up!"}
+              ? "No completed media yet."
+              : "No active media — all caught up!"}
           </Typography>
-          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => navigate("/videos/new")} sx={amberButtonSx}>New video</Button>
+          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => navigate(`${MEDIA_BASE}/new`)} sx={amberButtonSx}>New media</Button>
         </Paper>
       ) : (
         <Stack spacing={1.5}>
-          {videos.map((v) => <VideoCard key={v.id} video={v} onOpen={(id) => navigate(`/videos/${id}`)} />)}
+          {videos.map((v) => <VideoCard key={v.id} video={v} onOpen={(id) => navigate(`${MEDIA_BASE}/${id}`)} />)}
           {hasMore ? (
             <Button
               onClick={loadMore}
@@ -190,7 +187,7 @@ const VideosDashboard = () => {
       <Button
         variant="contained"
         startIcon={<AddRoundedIcon />}
-        onClick={() => navigate("/videos/new")}
+        onClick={() => navigate(`${MEDIA_BASE}/new`)}
         sx={{
           ...amberButtonSx,
           position: "fixed",

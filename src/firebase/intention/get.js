@@ -1,7 +1,25 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import { DB } from "../../config/firebase";
 
 const ref = collection(DB, "intentions");
+
+export const getIntentionById = async (id) => {
+  if (!id) return null;
+  try {
+    const snap = await getDoc(doc(ref, id));
+    return snap.exists() ? { ...snap.data(), id: snap.id } : null;
+  } catch (error) {
+    console.error("getIntentionById :", error);
+    throw error;
+  }
+};
 
 export const fetchIntentions = async () => {
   try {

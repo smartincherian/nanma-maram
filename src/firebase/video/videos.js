@@ -61,13 +61,14 @@ export const subscribeVideo = (id, cb) =>
 
 // A new video carries only metadata + a zeroed rollup. Its steps live in code
 // (videoSteps.js) and become work docs lazily, the first time each is assigned.
-export const addVideo = async ({ title, createdBy }) => {
+export const addVideo = async ({ title, type = "", createdBy }) => {
   const trimmed = (title || "").trim();
   if (!trimmed) {
     throw new Error("Video title is required.");
   }
   const ref = await addDoc(collection(DB, VIDEOS), {
     title: trimmed,
+    type: type || "",
     status: VIDEO_STATUS.ACTIVE,
     doneCount: 0,
     createdBy: createdBy || "",

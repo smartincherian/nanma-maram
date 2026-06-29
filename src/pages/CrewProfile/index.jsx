@@ -39,8 +39,7 @@ const CrewProfile = () => {
 
   if (!isCrew) return <Navigate to="/crew/join" replace />;
 
-  const canSave =
-    name.trim().length > 0 && phone.trim().length > 0 && skills.length > 0 && !saving;
+  const canSave = name.trim().length > 0 && skills.length > 0 && !saving;
 
   const handleSave = async () => {
     setSaving(true);
@@ -77,8 +76,8 @@ const CrewProfile = () => {
               />
               <TextField label="Email" value={crew?.email || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
               <TextField
-                label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)}
-                fullWidth size="small" required
+                label="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)}
+                fullWidth size="small"
               />
               <SkillsSelect value={skills} onChange={setSkills} />
               <Button variant="contained" onClick={handleSave} disabled={!canSave} sx={amberButtonSx}>

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import StickyNote2RoundedIcon from "@mui/icons-material/StickyNote2Rounded";
+import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import RadioButtonUncheckedRoundedIcon from "@mui/icons-material/RadioButtonUncheckedRounded";
 import RadioButtonCheckedRoundedIcon from "@mui/icons-material/RadioButtonCheckedRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -11,6 +13,10 @@ import { getStepName } from "../../../utils/videoSteps";
 import { getDueMeta } from "../../../utils/dueDate";
 import { STAGE_STATUS_META } from "../ui";
 import StatusChip from "./StatusChip";
+
+// The note field doubles as a link slot ("e.g. YouTube URL"), so treat a note
+// that is just a URL as a clickable link and show it with a link icon instead.
+const isUrl = (text) => /^https?:\/\/\S+$/i.test(text.trim());
 
 // The circle icon for a step, by status: hollow (pending) → orange ring
 // (in progress) → green check (done).
@@ -124,24 +130,110 @@ const StageTimeline = ({ stages = [], onCycleStage, onEditStage, canEdit = true 
                 </Box>
               </Stack>
 
-              {/* Assignee on the left, done-time pinned to the right extreme */}
-              <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} sx={{ mt: 0.25 }}>
+              {/* Assignee on the left; on the right a timestamp — the completion
+                  time for a done step, otherwise when it was started / last
+                  changed (or the doc created) — with the due label below it. */}
+              <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1} sx={{ mt: 0.25 }}>
                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ minWidth: 0, color: stage.assigneeName ? "#3b2a13" : "#a08a63" }}>
                   <PersonRoundedIcon sx={{ fontSize: 16 }} />
                   <Typography noWrap sx={{ fontSize: "0.85rem", fontWeight: stage.assigneeName ? 600 : 400 }}>
                     {stage.assigneeName || "Unassigned"}
                   </Typography>
                 </Stack>
-                {stage.completedAt ? (
-                  <Typography sx={{ color: "#8a6a36", fontSize: "0.76rem", flexShrink: 0 }}>
-                    {dayjs(stage.completedAt).format("D MMM · h:mm A")}
-                  </Typography>
-                ) : due ? (
-                  <Typography sx={{ color: due.color, fontSize: "0.76rem", fontWeight: 700, flexShrink: 0 }}>
-                    {due.label}
-                  </Typography>
-                ) : null}
+                {(() => {
+                  const timeAt = done ? stage.completedAt : stage.statusChangedAt;
+                  if (!timeAt && !due) return null;
+                  return (
+                    <Stack alignItems="flex-end" sx={{ flexShrink: 0, textAlign: "right" }}>
+                      {timeAt ? (
+                        <Typography sx={{ color: "#8a6a36", fontSize: "0.76rem" }}>
+                          {dayjs(timeAt).format("D MMM · h:mm A")}
+                        </Typography>
+                      ) : null}
+                      {due ? (
+                        <Typography sx={{ color: due.color, fontSize: "0.76rem", fontWeight: 700 }}>
+                          {due.label}
+                        </Typography>
+                      ) : null}
+                    </Stack>
+                  );
+                })()}
               </Stack>
+
+              {/* Note / link — always visible so admins don't have to open Edit
+                  to read it. A small "updated" timestamp sits on top; a bare URL
+                  renders as a clickable link. */}
+              {stage.note ? (
+                <Box
+                  sx={{
+                    mt: 0.75,
+                    px: 1,
+                    py: 0.6,
+                    borderRadius: 1.5,
+                    backgroundColor: "rgba(160,103,38,0.06)",
+                    border: "1px solid rgba(160,103,38,0.12)",
+                  }}
+                >
+                  {(stage.noteUpdatedAt || stage.lastUpdatedFrom) ? (
+                    <Stack direction="row" alignItems="center" gap={0.6} sx={{ mb: 0.25, flexWrap: "wrap" }}>
+                      {stage.lastUpdatedFrom ? (
+                        <Box
+                          component="span"
+                          sx={{
+                            fontSize: "0.6rem",
+                            fontWeight: 800,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            px: 0.6,
+                            py: "1px",
+                            borderRadius: 1,
+                            color: stage.lastUpdatedFrom === "crew" ? "#1b5e20" : "#935100",
+                            backgroundColor: stage.lastUpdatedFrom === "crew" ? "rgba(46,125,50,0.14)" : "rgba(160,103,38,0.12)",
+                          }}
+                        >
+                          {stage.lastUpdatedFrom === "crew" ? "Crew note" : "Admin note"}
+                        </Box>
+                      ) : null}
+                      {stage.noteUpdatedAt ? (
+                        <Typography component="span" sx={{ fontSize: "0.66rem", fontWeight: 700, color: "#a08a63", letterSpacing: "0.02em" }}>
+                          {dayjs(stage.noteUpdatedAt).format("D MMM · h:mm A")}
+                        </Typography>
+                      ) : null}
+                    </Stack>
+                  ) : null}
+                  <Stack direction="row" gap={0.75}>
+                    {isUrl(stage.note) ? (
+                      <LinkRoundedIcon sx={{ fontSize: 15, color: "#a16207", mt: "1px", flexShrink: 0 }} />
+                    ) : (
+                      <StickyNote2RoundedIcon sx={{ fontSize: 15, color: "#a16207", mt: "1px", flexShrink: 0 }} />
+                    )}
+                    {isUrl(stage.note) ? (
+                      <Typography
+                        component="a"
+                        href={stage.note.trim()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{
+                          fontSize: "0.8rem",
+                          color: "#935100",
+                          fontWeight: 600,
+                          wordBreak: "break-all",
+                          lineHeight: 1.4,
+                          textDecoration: "underline",
+                          textDecorationColor: "rgba(147,81,0,0.4)",
+                        }}
+                      >
+                        {stage.note.trim()}
+                      </Typography>
+                    ) : (
+                      <Typography sx={{ fontSize: "0.8rem", color: "#5b4a32", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.4 }}>
+                        {stage.note}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+              ) : null}
 
               {canEdit && selected ? (
                 <Button

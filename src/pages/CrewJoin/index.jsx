@@ -129,7 +129,7 @@ const CrewJoin = () => {
     }
   };
 
-  const canSubmit = phone.trim().length > 0 && skills.length > 0 && !saving;
+  const canSubmit = skills.length > 0 && !saving;
 
   return (
     <Centered>
@@ -140,8 +140,8 @@ const CrewJoin = () => {
         <TextField label="Name" value={user.displayName || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
         <TextField label="Email" value={user.email || ""} fullWidth size="small" InputProps={{ readOnly: true }} />
         <TextField
-          label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)}
-          fullWidth size="small" required placeholder="A number we can reach you on"
+          label="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)}
+          fullWidth size="small" placeholder="A number we can reach you on"
         />
         <SkillsSelect value={skills} onChange={setSkills} />
         <Button variant="contained" onClick={handleSubmit} disabled={!canSubmit} sx={amberButtonSx}>

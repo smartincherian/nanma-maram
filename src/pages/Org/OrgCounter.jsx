@@ -18,7 +18,7 @@ import { DB } from "../../config/firebase";
 import { addCounter } from "../../firebase/intention/add";
 import { getOrgBySlug } from "../../firebase/org/orgs";
 import { getOrgVoterName, setOrgVoterName } from "../../utils/orgVoter";
-import FormattedText from "./FormattedText";
+import CounterBox from "./CounterBox";
 import {
   SNACK_BAR_SEVERITY_TYPES,
   SnackbarContext,
@@ -118,24 +118,18 @@ const OrgCounter = () => {
             {counterData?.name || "Prayer"}
           </Typography>
 
-          {counterData?.intention ? (
-            <Box
-              sx={{
-                mb: 3,
-                p: 2,
-                borderRadius: 3,
-                textAlign: "center",
-                color: "#fff",
-                backgroundImage: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`,
-              }}
-            >
-              <Typography sx={{ fontWeight: 500, lineHeight: 1.7, "& strong": { fontWeight: 800 } }}>
-                <FormattedText text={counterData.intention} />
-              </Typography>
-            </Box>
-          ) : null}
+          <CounterBox text={counterData?.intention} accent={accent} />
 
-          <Grid container spacing={2} justifyContent="center" sx={{ mb: 3 }}>
+          {(counterData?.boxes || []).map((box) => (
+            <CounterBox
+              key={box.id}
+              text={box.content}
+              background={box.background !== false}
+              accent={accent}
+            />
+          ))}
+
+          <Grid container spacing={2} justifyContent="center" sx={{ mt: 1, mb: 3 }}>
             <Grid item xs={6}>
               <Box sx={{ textAlign: "center", p: 2, borderRadius: 3, bgcolor: "#faf7ff" }}>
                 <Typography variant="caption" color="text.secondary">CURRENT</Typography>
@@ -172,7 +166,7 @@ const OrgCounter = () => {
                 },
               }}
               render={({ field }) => (
-                <TextField {...field} label="Recite & Enter Count" type="number" fullWidth sx={{ mb: 2 }} error={!!errors.inputValue} helperText={errors.inputValue?.message} inputProps={{ min: 1, max: 1000 }} />
+                <TextField {...field} label="Enter Count" type="number" fullWidth sx={{ mb: 2 }} error={!!errors.inputValue} helperText={errors.inputValue?.message} inputProps={{ min: 1, max: 1000 }} />
               )}
             />
             <Button type="submit" variant="contained" fullWidth startIcon={<AddIcon />} sx={{ height: 50, borderRadius: 3, fontWeight: 700, bgcolor: accent, "&:hover": { bgcolor: accent } }}>

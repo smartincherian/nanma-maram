@@ -42,7 +42,10 @@ export const subscribeMyWorks = (assigneeId, cb) =>
 // Atomically updates the one work and recomputes the video's doneCount + status
 // from scratch, so the rollup can never drift. A work that ends up pending with no
 // assignee and no note is deleted to keep the collection lean.
-export const updateWork = async (videoId, stageId, patch, adminEmail) => {
+// `lastUpdatedFrom` records which surface made the write — "admin" (the video
+// detail screen) or "crew" (the crew member's own screen) — so a note can be
+// attributed without guessing from the writer's email.
+export const updateWork = async (videoId, stageId, patch, adminEmail, lastUpdatedFrom = "") => {
   await runTransaction(DB, async (tx) => {
     const vRef = videoRef(videoId);
     // All reads first (transaction rule). Read the video + every step's work doc.
@@ -57,6 +60,10 @@ export const updateWork = async (videoId, stageId, patch, adminEmail) => {
     }
 
     const existing = stepSnaps[stageId].exists() ? stepSnaps[stageId].data() : {};
+    // The note attribution (who wrote it + when) tracks the note only — a status
+    // change or reassignment must not re-stamp it, so it's frozen unless the note
+    // text actually changes.
+    const noteChanged = patch.note !== undefined && patch.note !== (existing.note || "");
     const next = {
       videoId,
       stageId,
@@ -66,6 +73,8 @@ export const updateWork = async (videoId, stageId, patch, adminEmail) => {
       dueDate: patch.dueDate !== undefined ? patch.dueDate : existing.dueDate || null,
       completedAt: existing.completedAt || null,
       updatedBy: adminEmail || "",
+      lastUpdatedFrom: noteChanged ? lastUpdatedFrom || "" : existing.lastUpdatedFrom || "",
+      noteUpdatedAt: noteChanged ? Date.now() : existing.noteUpdatedAt || null,
       updatedAt: Date.now(),
     };
     if (next.status === STAGE_STATUS.DONE && existing.status !== STAGE_STATUS.DONE) {
@@ -73,6 +82,15 @@ export const updateWork = async (videoId, stageId, patch, adminEmail) => {
     } else if (next.status !== STAGE_STATUS.DONE) {
       next.completedAt = null;
     }
+
+    // When the step entered its current state — stamped on the first write (doc
+    // created) and on every status change, so the timeline can show "started" /
+    // "changed" times the way Done shows its completion time. A note or due-date
+    // edit that doesn't move the status leaves it untouched.
+    const isNewDoc = !stepSnaps[stageId].exists();
+    const statusChanged = next.status !== (existing.status || STAGE_STATUS.PENDING);
+    next.statusChangedAt =
+      isNewDoc || statusChanged ? Date.now() : existing.statusChangedAt || null;
 
     const isEmpty =
       next.status === STAGE_STATUS.PENDING && !next.assigneeId && !next.note && !next.dueDate;
@@ -125,6 +143,20 @@ export const listOccupiedAssigneeIds = async () => {
     }
   });
   return occupied;
+};
+
+// Number of open (not-done) works per assignee id, as a plain object
+// { [assigneeId]: count }. Used to show each crew member's current load.
+export const listOpenWorkCountsByAssignee = async () => {
+  const snap = await getDocs(collection(DB, WORKS));
+  const counts = {};
+  snap.docs.forEach((d) => {
+    const w = d.data();
+    if (w.assigneeId && w.status !== STAGE_STATUS.DONE) {
+      counts[w.assigneeId] = (counts[w.assigneeId] || 0) + 1;
+    }
+  });
+  return counts;
 };
 
 // Delete every work doc belonging to a video (used when the video is deleted).

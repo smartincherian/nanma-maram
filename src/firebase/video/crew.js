@@ -71,7 +71,6 @@ export const registerCrew = async ({ email, name, phone, skills }) => {
   const cleanSkills = Array.isArray(skills) ? skills : [];
   if (!cleanEmail) throw new Error("Email is required.");
   if (!cleanName) throw new Error("Name is required.");
-  if (!cleanPhone) throw new Error("Phone number is required.");
   if (cleanSkills.length === 0) throw new Error("Pick at least one skill.");
   await setDoc(doc(DB, CREW, cleanEmail), {
     name: cleanName,
@@ -99,7 +98,6 @@ export const updateCrewProfile = async (id, { name, phone, skills }) => {
   const cleanPhone = (phone || "").trim();
   const cleanSkills = Array.isArray(skills) ? skills : [];
   if (!cleanName) throw new Error("Name is required.");
-  if (!cleanPhone) throw new Error("Phone number is required.");
   if (cleanSkills.length === 0) throw new Error("Pick at least one skill.");
   await updateDoc(doc(DB, CREW, id), {
     name: cleanName,

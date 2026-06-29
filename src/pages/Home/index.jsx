@@ -4,6 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import FilterVintageIcon from "@mui/icons-material/FilterVintage";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import ApartmentIcon from "@mui/icons-material/Apartment";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import {
@@ -25,7 +26,7 @@ const sacredPattern =
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
 
   const menuItems = [
     {
@@ -71,18 +72,26 @@ const Home = () => {
       path: "/register-prayer-bank",
     },
     {
-      text: "Video Tracking",
-      helper: "Track video production stages & crew",
+      text: "Media",
+      helper: "Track media production stages & crew",
       icon: <MovieFilterIcon />,
-      path: "/videos",
+      path: "/admin/media",
     },
     {
       text: "Manage Admins",
       helper: "Add, edit, or remove admin accounts",
       icon: <ManageAccountsIcon />,
       path: "/admins",
+      superAdminOnly: true,
     },
-  ];
+    {
+      text: "Manage Organizations",
+      helper: "Create & manage organizations",
+      icon: <ApartmentIcon />,
+      path: "/org-manage",
+      superAdminOnly: true,
+    },
+  ].filter((item) => !item.superAdminOnly || isSuperAdmin);
 
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 5 } }}>

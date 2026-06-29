@@ -7,22 +7,28 @@ const hasAnySkill = (member, skills) =>
 // Select a crew member for a step. When the step maps to skill(s)
 // (relevantSkills), only crew who have one of those skills are shown — skills
 // aren't listed since every option already qualifies. A step with no mapped
-// skill shows everyone. Either way, available crew come first and each row
-// shows availability + paused state.
-const CrewPicker = ({ crew, value, onChange, label = "Assignee", relevantSkills = [] }) => {
+// skill shows everyone. Crew who marked themselves not-available are hidden
+// entirely. Free crew come first; those already occupied show an orange dot and
+// a small badge with how many open works they currently hold.
+const CrewPicker = ({ crew, value, onChange, label = "Assignee", relevantSkills = [], workCounts = {} }) => {
   const options = useMemo(() => {
-    // Inactive crew are soft-deleted — never assignable.
-    const active = crew.filter((c) => c.active !== false);
+    // Inactive crew are soft-deleted; not-available crew opt out — neither is shown.
+    // The already-assigned member is kept regardless, so the field still shows them.
+    const assignable = crew.filter(
+      (c) => c.id === value || (c.active !== false && c.available !== false)
+    );
     const filtered =
-      relevantSkills.length > 0 ? active.filter((c) => hasAnySkill(c, relevantSkills)) : active;
-    // Available first, then by name — keeps the likely picks at the top.
+      relevantSkills.length > 0
+        ? assignable.filter((c) => c.id === value || hasAnySkill(c, relevantSkills))
+        : assignable;
+    // Free crew first, then by current load, then by name — keeps the best picks at the top.
     return filtered.sort((a, b) => {
-      const aFree = a.available !== false ? 0 : 1;
-      const bFree = b.available !== false ? 0 : 1;
-      if (aFree !== bFree) return aFree - bFree;
+      const aLoad = workCounts[a.id] || 0;
+      const bLoad = workCounts[b.id] || 0;
+      if (aLoad !== bLoad) return aLoad - bLoad;
       return (a.name || "").localeCompare(b.name || "");
     });
-  }, [crew, relevantSkills]);
+  }, [crew, relevantSkills, workCounts, value]);
 
   const selected = options.find((c) => c.id === value) || null;
 
@@ -36,31 +42,77 @@ const CrewPicker = ({ crew, value, onChange, label = "Assignee", relevantSkills 
       noOptionsText={relevantSkills.length > 0 ? "No crew with this skill" : "No crew"}
       renderOption={(props, option) => {
         const { key, ...liProps } = props;
-        const unavailable = option.available === false;
+        const load = workCounts[option.id] || 0;
+        const occupied = load > 0;
         return (
-          <Box component="li" key={key} {...liProps} sx={{ display: "block !important", py: 1 }}>
-            <Stack direction="row" alignItems="center" gap={1} sx={{ flexWrap: "wrap" }}>
-              {/* Presence dot — green when available, hollow grey when not */}
+          <Box component="li" key={key} {...liProps} sx={{ display: "block !important", py: 0.75, px: 1.5 }}>
+            <Stack direction="row" alignItems="center" gap={1.25} sx={{ flexWrap: "nowrap" }}>
+              {/* Presence dot — green when free, orange when occupied */}
               <Box
-                aria-label={unavailable ? "Not available" : "Available"}
+                aria-label={occupied ? `Occupied (${load} ${load === 1 ? "task" : "tasks"})` : "Free"}
                 sx={{
-                  width: 10,
-                  height: 10,
+                  width: 9,
+                  height: 9,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  backgroundColor: unavailable ? "transparent" : "#2e9e5b",
-                  border: unavailable ? "2px solid #b6bcc4" : "none",
+                  backgroundColor: occupied ? "#ed6c02" : "#2e9e5b",
                 }}
               />
-              <Typography sx={{ fontWeight: 700, color: "#3b2a13" }}>{option.name}</Typography>
+              <Typography noWrap sx={{ fontWeight: 600, color: "#3b2a13", flexGrow: 1, minWidth: 0 }}>
+                {option.name}
+              </Typography>
+              {occupied ? (
+                <Box
+                  aria-hidden
+                  sx={{
+                    flexShrink: 0,
+                    px: 0.85,
+                    height: 20,
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.4,
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    color: "#ed6c02",
+                    backgroundColor: "#ed6c021f",
+                  }}
+                >
+                  {load} {load === 1 ? "task" : "tasks"}
+                </Box>
+              ) : null}
             </Stack>
           </Box>
         );
       }}
       renderInput={(params) => <TextField {...params} label={label} placeholder="Search crew…" />}
       fullWidth
-      // Keep the dropdown usable on small screens.
-      slotProps={{ paper: { sx: { "& .MuiAutocomplete-listbox": { maxHeight: { xs: "50vh", sm: 320 } } } } }}
+      slotProps={{
+        // A rounded, raised card that sits just below the input — not flush
+        // against it — so the dropdown reads as its own surface on mobile.
+        popper: { modifiers: [{ name: "offset", options: { offset: [0, 6] } }] },
+        paper: {
+          elevation: 0,
+          sx: {
+            borderRadius: 3,
+            border: "1px solid rgba(147,81,0,0.14)",
+            boxShadow: "0 12px 32px rgba(59,42,19,0.16)",
+            overflow: "hidden",
+            "& .MuiAutocomplete-listbox": {
+              maxHeight: { xs: "50vh", sm: 320 },
+              py: 0.5,
+              "& .MuiAutocomplete-option": {
+                borderRadius: 2,
+                mx: 0.5,
+                "&.Mui-focused, &[aria-selected='true']": {
+                  backgroundColor: "rgba(147,81,0,0.08)",
+                },
+              },
+            },
+          },
+        },
+      }}
     />
   );
 };
