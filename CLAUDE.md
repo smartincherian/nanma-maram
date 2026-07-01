@@ -68,3 +68,12 @@ There is no Firebase Auth. Edit/create operations require the user to type a har
 `SnackbarProvider` (`src/components/Snackbar/index.js`) wraps the whole app and exposes `{ showSnackbar, hideSnackbar }` via `SnackbarContext`. Import `useContext(SnackbarContext)` in any page to show toast notifications.
 
 UI is Material UI v5 (MUI) throughout. No custom theme provider — components use default MUI theme with inline `sx` prop overrides.
+
+### UI consistency
+
+Keep repeated UI patterns visually and structurally identical — the same element should look and behave the same everywhere it appears. When two or more places share a pattern (dialog/bottom-sheet footers, action buttons, cards, chips, status colors), factor the styling into a shared `sx` constant (e.g. `sheetActionsSx`, `dismissButtonSx`, `amberButtonSx` in `src/pages/Videos/ui.js`) and reuse it rather than re-specifying `sx` inline per instance. Concretely:
+
+- **Bottom-sheet / dialog footers** are a single `space-between` row: the secondary/dismiss action (Cancel/Close, styled with `dismissButtonSx`) at the left end, the primary action (Save/contained amber button via `amberButtonSx`) at the right end. Don't stack them vertically or full-width on mobile.
+- **Status/urgency colors** come from the shared helpers (`getDueMeta`, `STATUS`/`STATUS_META` maps) — don't hardcode ad-hoc hex values for the same semantic state in different places.
+
+When adding a new instance of an existing pattern, match the existing one; when changing the pattern, update the shared constant so every instance moves together.

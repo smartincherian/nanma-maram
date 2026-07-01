@@ -25,7 +25,7 @@ import {
   SNACK_BAR_SEVERITY_TYPES,
 } from "../../components/Snackbar";
 import { addCrew, deleteCrew, listCrew, updateCrew } from "../../firebase/video/crew";
-import { listOccupiedAssigneeIds } from "../../firebase/video/works";
+import { listOccupiedAssigneeIds, listOpenWorkCountsByAssignee } from "../../firebase/video/works";
 import { getCrewSkillLabel } from "../../utils/crewSkills";
 import SkillsSelect from "../../components/SkillsSelect";
 import { amberButtonSx, cardSx } from "../Videos/ui";
@@ -75,6 +75,7 @@ const CrewTab = () => {
   const { showSnackbar } = useContext(SnackbarContext);
   const [crew, setCrew] = useState([]);
   const [occupiedIds, setOccupiedIds] = useState(() => new Set());
+  const [openCounts, setOpenCounts] = useState({}); // { assigneeId: number of open works }
   const [statusFilter, setStatusFilter] = useState(null); // one status key, or null = all
   const [skillFilter, setSkillFilter] = useState([]); // skill values; empty = all
   const [dialog, setDialog] = useState(null);
@@ -85,9 +86,14 @@ const CrewTab = () => {
   const reload = async () => {
     try {
       // Soft-deleted (inactive) crew are hidden from the management list.
-      const [all, occupied] = await Promise.all([listCrew(), listOccupiedAssigneeIds()]);
+      const [all, occupied, counts] = await Promise.all([
+        listCrew(),
+        listOccupiedAssigneeIds(),
+        listOpenWorkCountsByAssignee(),
+      ]);
       setCrew(all.filter((m) => m.active !== false));
       setOccupiedIds(occupied);
+      setOpenCounts(counts);
     } catch (e) {
       showSnackbar("Could not load crew.", SNACK_BAR_SEVERITY_TYPES.ERROR);
     }
@@ -222,6 +228,7 @@ const CrewTab = () => {
         ) : null}
         {filtered.map((member) => {
           const statusKey = memberStatusKey(member, occupiedIds);
+          const taskCount = openCounts[member.id] || 0;
           return (
           <Paper key={member.id} elevation={0} sx={{ ...cardSx, display: "flex", alignItems: "center", gap: 0.5 }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -236,6 +243,13 @@ const CrewTab = () => {
                 }}
               />
               <Typography noWrap sx={{ fontWeight: 700, color: "#3b2a13" }}>{member.name}</Typography>
+              {taskCount > 0 ? (
+                <Chip
+                  size="small"
+                  label={`${taskCount} ${taskCount === 1 ? "task" : "tasks"}`}
+                  sx={{ flexShrink: 0, height: 22, fontWeight: 700, fontSize: "0.7rem", backgroundColor: `${STATUS.occupied.color}1f`, color: STATUS.occupied.color }}
+                />
+              ) : null}
             </Stack>
             <IconButton aria-label={`View ${member.name}`} onClick={() => setViewTarget(member)} sx={{ color: "#5b6472" }}><VisibilityRoundedIcon /></IconButton>
             <IconButton aria-label={`Edit ${member.name}`} onClick={() => openDialog(member)} sx={{ color: "#935100" }}><EditRoundedIcon /></IconButton>
@@ -272,6 +286,13 @@ const CrewTab = () => {
             <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
               <Typography sx={{ fontWeight: 800, color: "#3b2a13", fontSize: "1.25rem" }}>{viewTarget.name}</Typography>
               <Chip size="small" label={STATUS[memberStatusKey(viewTarget, occupiedIds)].label} sx={availabilityChipSx(memberStatusKey(viewTarget, occupiedIds))} />
+              {(openCounts[viewTarget.id] || 0) > 0 ? (
+                <Chip
+                  size="small"
+                  label={`${openCounts[viewTarget.id]} ${openCounts[viewTarget.id] === 1 ? "open task" : "open tasks"}`}
+                  sx={{ fontWeight: 700, backgroundColor: `${STATUS.occupied.color}1f`, color: STATUS.occupied.color }}
+                />
+              ) : null}
             </Stack>
 
             <Divider />

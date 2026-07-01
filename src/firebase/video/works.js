@@ -92,6 +92,21 @@ export const updateWork = async (videoId, stageId, patch, adminEmail, lastUpdate
     next.statusChangedAt =
       isNewDoc || statusChanged ? Date.now() : existing.statusChangedAt || null;
 
+    // Assignment attribution — stamped when the work gets a (new) assignee, so the
+    // crew member can see who handed them the work and when. Frozen once set unless
+    // the assignee actually changes; cleared if the assignee is removed.
+    const assigneeChanged = next.assigneeId !== (existing.assigneeId || null);
+    if (next.assigneeId && assigneeChanged) {
+      next.assignedBy = adminEmail || "";
+      next.assignedAt = Date.now();
+    } else if (!next.assigneeId) {
+      next.assignedBy = "";
+      next.assignedAt = null;
+    } else {
+      next.assignedBy = existing.assignedBy || "";
+      next.assignedAt = existing.assignedAt || null;
+    }
+
     const isEmpty =
       next.status === STAGE_STATUS.PENDING && !next.assigneeId && !next.note && !next.dueDate;
 
